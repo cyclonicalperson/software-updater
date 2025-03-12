@@ -7,6 +7,7 @@ from typing import Dict, Optional, Union
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+
 class UpdateManager(QObject):
     update_progress = pyqtSignal(int, str)
     completed = pyqtSignal()

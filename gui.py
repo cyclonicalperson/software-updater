@@ -1,6 +1,6 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar, QTextEdit
-from PyQt6.QtCore import QThreadPool, QRunnable, QObject
+from PyQt6.QtCore import QThreadPool, QRunnable
 from app_detector import get_installed_apps
 from updater import UpdateManager
 
