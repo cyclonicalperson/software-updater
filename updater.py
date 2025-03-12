@@ -153,20 +153,20 @@ class UpdateManager(QObject):
 
         for option in ['--name', '--id']:
             try:
-                result = subprocess.run(f'winget upgrade {option} "{app.get("name" if option == "--name" else "ident", "")}" --silent', shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                result = subprocess.run(f'winget upgrade {option} "{app.get("name" if option == "--name" else "ident", "")}" --silent', shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
                 if "No installed package" in result.stdout or "No available upgrade" in result.stdout:
                     continue
                 return True
-            except subprocess.CalledProcessError:
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
                 logging.warning(f"Failed using {option} for {app.get('name', 'unknown')}.")
 
         return False
 
     def _run_update_command(self, command: str) -> bool:
         try:
-            result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
             if "No installed package" in result.stdout or "No available upgrade" in result.stdout:
                 return False
             return True
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             return False
