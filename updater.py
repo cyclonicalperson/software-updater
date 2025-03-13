@@ -7,7 +7,6 @@ from app_endpoints import get_latest_version
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
 class UpdateManager(QObject):
     update_progress = pyqtSignal(int, str)
     completed = pyqtSignal()
@@ -15,14 +14,9 @@ class UpdateManager(QObject):
     def __init__(self):
         super().__init__()
         self.active = True
-        self.handlers = {
-            'chrome': self._handle_common_app,
-            'firefox': self._handle_common_app,
-            'vscode': self._handle_common_app,
-            'zoom': self._handle_common_app,
-            'slack': self._handle_common_app,
-            'spotify': self._handle_common_app,
-        }
+
+        # Automatically map handlers for all known apps
+        self.handlers = {app: self._handle_common_app for app in get_latest_version.__globals__['APP_APIS'].keys()}
 
     def check_and_install(self, app_list: Union[Dict, list]):
         """Main update process with progress tracking and timeouts."""
@@ -30,7 +24,6 @@ class UpdateManager(QObject):
             if isinstance(app_list, dict):
                 app_list = [app_list]
 
-            logging.info(f"Received app list: {app_list}")
             total = len(app_list)
             completed = 0
 
@@ -47,7 +40,6 @@ class UpdateManager(QObject):
                 progress = int((completed / total) * 100)
                 self.update_progress.emit(progress, f"{update_status}: {app['name']}")
 
-            # Ensure the progress bar reaches 100% once all updates are done
             self.update_progress.emit(100, "Update process completed.")
             self.completed.emit()
 
@@ -57,10 +49,8 @@ class UpdateManager(QObject):
 
     def _is_valid_app(self, app):
         """Validate app structure."""
-        if not isinstance(app, dict):
-            return False
         required_keys = {'name', 'version', 'ident'}
-        return required_keys.issubset(app.keys())
+        return isinstance(app, dict) and required_keys.issubset(app.keys())
 
     def _process_app(self, app) -> str:
         """Handle each app update."""
@@ -80,31 +70,20 @@ class UpdateManager(QObject):
 
     def _get_handler(self, app_name: str) -> Optional[callable]:
         """Get a specialized handler for known applications."""
-        for key in self.handlers:
-            if key in app_name:
-                return self.handlers[key]
-        return None
+        return self.handlers.get(app_name)
 
     def _handle_common_app(self, app: Dict) -> bool:
-        """
-        Generic handler for apps like Chrome, Firefox, VSCode, Zoom.
-        Uses app_endpoints.py to fetch the latest version.
-        """
+        """Generic handler for all known apps in APP_APIS."""
         app_name = app['name'].lower()
-        known_keys = {'chrome', 'firefox', 'vscode', 'zoom', 'slack', 'spotify'}
 
-        for key in known_keys:
-            if key in app_name:
-                latest = get_latest_version(key)
-                if latest and app['version'] != latest:
-                    logging.info(f"Updating {app['name']} from {app['version']} to {latest}")
-                    return self._run_update_command(f'winget upgrade --name "{app["name"]}" --silent')
+        latest = get_latest_version(app_name)
+        if latest and app['version'] != latest:
+            logging.info(f"Updating {app['name']} from {app['version']} to {latest}")
+            return self._run_update_command(f'winget upgrade --name "{app["name"]}" --silent')
         return False
 
     def _generic_winget_update(self, app: Dict) -> bool:
         """Fallback to winget for unknown apps."""
-        logging.info(f"Attempting winget update for {app.get('name', 'unknown')}.")
-
         for option in ['--name', '--id']:
             try:
                 result = subprocess.run(
