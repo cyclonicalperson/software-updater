@@ -1,4 +1,2 @@
-pyqt6
-pywin32
+PyQt6
 requests
-typing
