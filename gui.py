@@ -1,11 +1,14 @@
 import sys
 import json
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton,
-                             QVBoxLayout, QWidget, QProgressBar, QTextEdit, QHBoxLayout)
-from PyQt6.QtCore import QThreadPool, QRunnable
+                             QVBoxLayout, QWidget, QProgressBar, QTextEdit, QHBoxLayout,
+                             QGroupBox)
+from PyQt6.QtCore import QThreadPool, QRunnable, Qt
+from PyQt6.QtGui import QIcon, QFont
 from app_detector import get_installed_apps
 from updater import UpdateManager
 
+# Constants
 EXCLUSIONS_FILE = "exclusions.json"
 
 
@@ -35,56 +38,87 @@ class UpdateWorker(QRunnable):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Update Manager")
-        self.setGeometry(100, 100, 800, 600)
+        self.setWindowTitle("Software Updater")
+        self.setGeometry(100, 100, 600, 600)
+        # self.setWindowIcon(QIcon("icon.ico"))  # Add icon
         self.threadpool = QThreadPool()
         self.manager = UpdateManager()
-
         self.exclusions = load_exclusions()
-
         self._init_ui()
 
     def _init_ui(self):
         central_widget = QWidget()
         layout = QVBoxLayout()
+        layout.setContentsMargins(10, 10, 10, 10)  # Consistent spacing
+        layout.setSpacing(10)
 
-        # App list
+        # App list group box
+        app_list_group = QGroupBox()
+        app_list_group.setTitle("Installed Apps")
+        app_list_group.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center title
+        app_list_layout = QVBoxLayout()
+        app_list_layout.setSpacing(5)
+
         self.list_widget = QListWidget()
-        layout.addWidget(self.list_widget)
+        self.list_widget.setFont(QFont("Arial", 10))  # Clear font
+        app_list_layout.addWidget(self.list_widget)
 
-        # Exclusion list
-        self.exclusion_list = QListWidget()
-        layout.addWidget(self.exclusion_list)
+        app_list_group.setLayout(app_list_layout)
+        layout.addWidget(app_list_group)
 
         # Button layout
         btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(5)
 
         self.exclude_btn = QPushButton("Exclude Selected")
         self.exclude_btn.clicked.connect(self.exclude_app)
+        self.exclude_btn.setEnabled(False)  # Initially disabled
         btn_layout.addWidget(self.exclude_btn)
 
         self.include_btn = QPushButton("Include Selected")
         self.include_btn.clicked.connect(self.include_app)
+        self.include_btn.setEnabled(False)  # Initially disabled
         btn_layout.addWidget(self.include_btn)
 
         layout.addLayout(btn_layout)
 
+        # Exclusion list group box
+        exclusion_list_group = QGroupBox()
+        exclusion_list_group.setTitle("Excluded Apps")
+        exclusion_list_group.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center title
+        exclusion_list_layout = QVBoxLayout()
+        exclusion_list_layout.setSpacing(5)
+
+        self.exclusion_list = QListWidget()
+        self.exclusion_list.setFont(QFont("Arial", 10))  # Clear font
+        exclusion_list_layout.addWidget(self.exclusion_list)
+
+        exclusion_list_group.setLayout(exclusion_list_layout)
+        layout.addWidget(exclusion_list_group)
+
+        # Start Update Check button
+        start_btn_layout = QHBoxLayout()
+        start_btn_layout.addStretch()  # Stretch before button
+        self.start_btn = QPushButton("Start Update Check")
+        self.start_btn.clicked.connect(self.start_update)
+        self.start_btn.setEnabled(False)  # Initially disabled
+        self.start_btn.setFixedWidth(int(self.width() * 0.5))  # Set button width to 50% of GUI width
+        start_btn_layout.addWidget(self.start_btn, alignment=Qt.AlignmentFlag.AlignCenter)  # Center the button
+        start_btn_layout.addStretch()  # Stretch after button
+        layout.addLayout(start_btn_layout)
+
         # Progress bar
-        self.progress_bar = QProgressBar(self)
-        layout.addWidget(self.progress_bar)
+        self.progress_bar = QProgressBar()
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
+        layout.addWidget(self.progress_bar)
 
         # Status box
-        self.status_box = QTextEdit(self)
+        self.status_box = QTextEdit()
         self.status_box.setReadOnly(True)
+        self.status_box.setFont(QFont("Arial", 10))  # Clear font
         layout.addWidget(self.status_box)
-
-        # Start button
-        self.start_btn = QPushButton("Start Update Check")
-        self.start_btn.clicked.connect(self.start_update)
-        layout.addWidget(self.start_btn)
 
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
@@ -97,6 +131,10 @@ class MainWindow(QMainWindow):
         self.populate_app_list()
         self.populate_exclusion_list()
 
+        # Connect selection changes
+        self.list_widget.itemSelectionChanged.connect(self.update_button_states)
+        self.exclusion_list.itemSelectionChanged.connect(self.update_button_states)
+
     def populate_app_list(self):
         self.list_widget.clear()
         for app in get_installed_apps():
@@ -104,10 +142,29 @@ class MainWindow(QMainWindow):
             if app_name not in self.exclusions:
                 self.list_widget.addItem(f"{app_name} v{app['version']}")
 
+        self.update_button_states()
+
     def populate_exclusion_list(self):
         self.exclusion_list.clear()
         for app in self.exclusions:
             self.exclusion_list.addItem(app)
+
+        self.update_button_states()
+
+    def sort_app_list(self, sort_by):
+        self.list_widget.clear()
+        apps = [app for app in get_installed_apps() if app['name'] not in self.exclusions]
+        if sort_by == "Name":
+            apps.sort(key=lambda x: x['name'])
+        elif sort_by == "Version":
+            apps.sort(key=lambda x: x['version'])
+        for app in apps:
+            self.list_widget.addItem(f"{app['name']} v{app['version']}")
+
+    def update_button_states(self):
+        self.exclude_btn.setEnabled(self.list_widget.currentItem() is not None)
+        self.include_btn.setEnabled(self.exclusion_list.currentItem() is not None)
+        self.start_btn.setEnabled(self.list_widget.count() > 0)
 
     def exclude_app(self):
         selected_item = self.list_widget.currentItem()
