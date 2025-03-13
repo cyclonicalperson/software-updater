@@ -1,3 +1,4 @@
+import json
 import logging
 import subprocess
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -6,6 +7,18 @@ from app_endpoints import get_latest_version
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+EXCLUSIONS_FILE = "exclusions.json"
+
+
+def load_exclusions():
+    """Load exclusions from the exclusions.json file."""
+    try:
+        with open(EXCLUSIONS_FILE, 'r') as f:
+            return json.load(f)  # List of app names to exclude
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []  # Return an empty list if the file is not found or is invalid
+
 
 class UpdateManager(QObject):
     update_progress = pyqtSignal(int, str)
@@ -21,6 +34,9 @@ class UpdateManager(QObject):
     def check_and_install(self, app_list: Union[Dict, list]):
         """Main update process with progress tracking and timeouts."""
         try:
+            # Load exclusions inside the method
+            exclusions = load_exclusions()
+
             if isinstance(app_list, dict):
                 app_list = [app_list]
 
@@ -33,6 +49,16 @@ class UpdateManager(QObject):
                     continue
                 if not self.active:
                     break
+
+                # Check if the app is excluded
+                if app['name'] in exclusions:
+                    update_status = f"Update skipped: {app['name']}"
+                    self.update_progress.emit(
+                        int((completed / total) * 100),
+                        update_status
+                    )
+                    completed += 1
+                    continue
 
                 update_status = self._process_app(app)
                 completed += 1
