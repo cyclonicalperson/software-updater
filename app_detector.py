@@ -1,8 +1,7 @@
 import winreg
-from typing import List, Dict, Optional
 
 
-def get_installed_apps() -> List[Dict]:
+def get_installed_apps():
     """Improved registry reader with common app detection"""
     apps = []
     reg_paths = [
@@ -16,14 +15,14 @@ def get_installed_apps() -> List[Dict]:
                 try:
                     subkey_name = winreg.EnumKey(key, i)
                     with winreg.OpenKey(key, subkey_name) as subkey:
-                        if app := _read_app_details(subkey, subkey_name):
+                        if app := read_app_details(subkey, subkey_name):
                             apps.append(app)
                 except OSError:
                     continue
     return apps
 
 
-def _get_reg_value(key, value_name) -> Optional[str]:
+def get_reg_value(key, value_name):
     """Helper function to safely get registry values"""
     try:
         value, _ = winreg.QueryValueEx(key, value_name)
@@ -32,17 +31,17 @@ def _get_reg_value(key, value_name) -> Optional[str]:
         return None
 
 
-def _read_app_details(subkey, subkey_name) -> Optional[Dict]:
-    name = _get_reg_value(subkey, "DisplayName")
+def read_app_details(subkey, subkey_name):
+    name = get_reg_value(subkey, "DisplayName")
     if not name:
         return None
 
     return {
         'name': name,
-        'version': _get_reg_value(subkey, "DisplayVersion"),
-        'publisher': _get_reg_value(subkey, "Publisher"),
-        'ident': _get_reg_value(subkey, "BundleIdentifier") or subkey_name,
-        'install_source': _get_reg_value(subkey, "InstallSource"),
-        'uninstall_string': _get_reg_value(subkey, "UninstallString")
+        'version': get_reg_value(subkey, "DisplayVersion"),
+        'publisher': get_reg_value(subkey, "Publisher"),
+        'ident': get_reg_value(subkey, "BundleIdentifier") or subkey_name,
+        'install_source': get_reg_value(subkey, "InstallSource"),
+        'uninstall_string': get_reg_value(subkey, "UninstallString")
     }
 
