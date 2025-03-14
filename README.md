@@ -36,7 +36,7 @@ An Windows application for the automated updating of apps installed on the syste
 3. Build the executable (optional):
 
     ```bash
-    pyinstaller --onefile --noconsole --icon=icon.ico gui.py
+    pyinstaller --onefile --noconsole --icon=icon.ico --name="Software Updater" gui.py
     ```
 
 ## Usage
