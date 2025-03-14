@@ -11,7 +11,6 @@ from updater import UpdateManager
 # Constants
 EXCLUSIONS_FILE = "exclusions.json"
 
-
 def load_exclusions():
     try:
         with open(EXCLUSIONS_FILE, 'r') as f:
@@ -19,11 +18,9 @@ def load_exclusions():
     except (FileNotFoundError, json.JSONDecodeError):
         return []
 
-
 def save_exclusions(exclusions):
     with open(EXCLUSIONS_FILE, 'w') as f:
         json.dump(exclusions, f)
-
 
 class UpdateWorker(QRunnable):
     def __init__(self, manager, app_list):
@@ -33,7 +30,6 @@ class UpdateWorker(QRunnable):
 
     def run(self):
         self.manager.check_and_install(self.app_list)
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -151,16 +147,6 @@ class MainWindow(QMainWindow):
 
         self.update_button_states()
 
-    def sort_app_list(self, sort_by):
-        self.list_widget.clear()
-        apps = [app for app in get_installed_apps() if app['name'] not in self.exclusions]
-        if sort_by == "Name":
-            apps.sort(key=lambda x: x['name'])
-        elif sort_by == "Version":
-            apps.sort(key=lambda x: x['version'])
-        for app in apps:
-            self.list_widget.addItem(f"{app['name']} v{app['version']}")
-
     def update_button_states(self):
         self.exclude_btn.setEnabled(self.list_widget.currentItem() is not None)
         self.include_btn.setEnabled(self.exclusion_list.currentItem() is not None)
@@ -195,7 +181,14 @@ class MainWindow(QMainWindow):
 
     def update_status(self, progress, message):
         self.progress_bar.setValue(progress)
-        self.status_box.append(message)
+        if "Successfully updated" in message:
+            self.status_box.append(f"<p style='background-color:#90EE90; border: 1px solid #008000;'>{message}</p>")
+        elif "Could not be updated" in message:
+            self.status_box.append(f"<p style='background-color:#FF7F7F; border: 1px solid #8B0000;'>{message}</p>")
+        elif "Update skipped" in message:
+            self.status_box.append(f"<p style='background-color:#f0e769; border: 1px solid #d6ca1a;'>{message}</p>")
+        else:
+            self.status_box.append(message)
 
     def on_complete(self):
         self.status_box.append("Update process completed.")
