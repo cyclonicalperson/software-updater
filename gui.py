@@ -107,13 +107,11 @@ class MainWindow(QMainWindow):
 
         # Start Update Check button
         start_btn_layout = QHBoxLayout()
-        start_btn_layout.addStretch()  # Stretch before button
         self.start_btn = QPushButton("Start Update Check")
         self.start_btn.clicked.connect(self.start_update)
-        self.start_btn.setEnabled(False)  # Initially disabled
-        self.start_btn.setFixedWidth(int(self.width() * 0.5))  # Set button width to 50% of GUI width
-        start_btn_layout.addWidget(self.start_btn, alignment=Qt.AlignmentFlag.AlignCenter)  # Center the button
-        start_btn_layout.addStretch()  # Stretch after button
+        self.start_btn.setEnabled(False)
+        self.start_btn.setFixedWidth(int(self.width() * 0.5))
+        start_btn_layout.addWidget(self.start_btn, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addLayout(start_btn_layout)
 
         # Progress bar
@@ -134,7 +132,6 @@ class MainWindow(QMainWindow):
 
         # Connect update signals
         self.manager.update_progress.connect(self.update_status)
-        self.manager.completed.connect(self.on_complete)
 
         # Check for winget
         if not check_winget():
@@ -190,6 +187,7 @@ class MainWindow(QMainWindow):
 
     def start_update(self):
         self.status_box.clear()
+        self.progress_bar.setValue(0)
 
         app_list = [app for app in get_installed_apps() if app['name'] not in self.exclusions]
 
@@ -204,10 +202,6 @@ class MainWindow(QMainWindow):
             self.status_box.append(f"<p style='background-color:#FF7F7F; border: 1px solid #8B0000;'>{message}</p>")
         else:
             self.status_box.append(message)
-
-    def on_complete(self):
-        self.status_box.append("Update process completed.")
-        self.statusBar().showMessage("Update process completed")
 
 
 if __name__ == "__main__":
