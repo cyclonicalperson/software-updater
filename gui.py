@@ -1,10 +1,11 @@
 import sys
 import json
 import subprocess
+import asyncio
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton,
                              QVBoxLayout, QWidget, QProgressBar, QTextEdit, QHBoxLayout,
                              QGroupBox)
-from PyQt6.QtCore import QThreadPool, QRunnable, Qt
+from PyQt6.QtCore import QThreadPool, QRunnable, Qt, QObject, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QIcon, QFont
 from app_detector import get_installed_apps
 from updater import UpdateManager
@@ -34,14 +35,26 @@ def check_winget():
         return False
 
 
-class UpdateWorker(QRunnable):
-    def __init__(self, manager, app_list):
-        super().__init__()
-        self.manager = manager
-        self.app_list = app_list
+class AsyncSignals(QObject):
+    finished = pyqtSignal()
 
+
+class AsyncWorker(QRunnable):
+    def __init__(self, async_func, *args):
+        super().__init__()
+        self.async_func = async_func
+        self.args = args
+        self.signals = AsyncSignals()
+
+    @pyqtSlot()
     def run(self):
-        self.manager.check_and_install(self.app_list)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(self.async_func(*self.args))
+        finally:
+            loop.close()
+            self.signals.finished.emit()
 
 
 class MainWindow(QMainWindow):
@@ -124,14 +137,19 @@ class MainWindow(QMainWindow):
         # Status box
         self.status_box = QTextEdit()
         self.status_box.setReadOnly(True)
-        self.status_box.setFont(QFont("Arial", 10))  # Clear font
+        self.status_box.setFont(QFont("Arial", 10))
         layout.addWidget(self.status_box)
+
+        # Status bar
+        self.status_bar = self.statusBar()
+        self.status_bar.showMessage("Ready")
 
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
         # Connect update signals
         self.manager.update_progress.connect(self.update_status)
+        self.manager.update_app_being_processed.connect(self.update_status_bar)
 
         # Check for winget
         if not check_winget():
@@ -188,11 +206,12 @@ class MainWindow(QMainWindow):
     def start_update(self):
         self.status_box.clear()
         self.progress_bar.setValue(0)
-
         app_list = [app for app in get_installed_apps() if app['name'] not in self.exclusions]
 
-        worker = UpdateWorker(self.manager, app_list)
-        self.threadpool.start(worker)
+        # Call async function using QThreadPool
+        async_worker = AsyncWorker(self.manager.check_and_install, app_list)
+        async_worker.signals.finished.connect(lambda: self.status_bar.showMessage("All updates completed!", 3000))
+        self.threadpool.start(async_worker)
 
     def update_status(self, progress, message):
         self.progress_bar.setValue(progress)
@@ -202,6 +221,9 @@ class MainWindow(QMainWindow):
             self.status_box.append(f"<p style='background-color:#FF7F7F; border: 1px solid #8B0000;'>{message}</p>")
         else:
             self.status_box.append(message)
+
+    def update_status_bar(self, message):
+        self.status_bar.showMessage(f"Updating {message}")
 
 
 if __name__ == "__main__":

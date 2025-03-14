@@ -1,9 +1,8 @@
 import json
 import logging
 import subprocess
-import threading
+import asyncio
 from PyQt6.QtCore import QObject, pyqtSignal
-from typing import Dict, Optional, Union
 from app_endpoints import get_latest_version
 
 # Configure logging
@@ -16,72 +15,77 @@ def load_exclusions():
     """Load exclusions from the exclusions.json file."""
     try:
         with open(EXCLUSIONS_FILE, 'r') as f:
-            return json.load(f)  # List of app names to exclude
+            return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        return []  # Return an empty list if the file is not found or is invalid
+        return []
 
 
 class UpdateManager(QObject):
     update_progress = pyqtSignal(int, str)
+    update_app_being_processed = pyqtSignal(str)
     completed = pyqtSignal()
 
     def __init__(self):
         super().__init__()
         self.active = True
-
-        # Automatically map handlers for all known apps
         self.handlers = {app: self.handle_common_app for app in get_latest_version.__globals__['APP_APIS'].keys()}
+        self.completed_count = 0  # Initialize count of completed updates
+        self.lock = asyncio.Lock()  # Add a lock
 
-    def check_and_install(self, app_list: Union[Dict, list]):
+    async def check_and_install(self, app_list):
         """Main update process with progress tracking and timeouts."""
         try:
             exclusions = load_exclusions()
-
             if isinstance(app_list, dict):
                 app_list = [app_list]
-
             total = len(app_list)
-            completed = 0
+            self.completed_count = 0
+            tasks = []
 
-            def process_app_thread(app):
-                nonlocal completed
+            for app in app_list:
                 if not self.is_valid_app(app):
                     logging.error(f"Invalid app format: {app}")
-                    return
+                    continue
                 if not self.active:
-                    return
-
+                    continue
+                self.update_app_being_processed.emit(app['name'])
                 if app['name'] in exclusions:
                     update_status = f"Update skipped: {app['name']}"
+                    progress = int((self.completed_count / total) * 100)
+                    self.update_progress.emit(progress, update_status)
                 else:
-                    update_status = self.process_app(app)
+                    # Add the async task to the list to be run concurrently
+                    tasks.append(self.process_app_and_update_status(app, total))
 
-                completed += 1
-                progress = int((completed / total) * 100)
-                self.update_progress.emit(progress, f"{update_status}: {app['name']}")
+            # Run all tasks concurrently using asyncio.gather
+            await asyncio.gather(*tasks)
 
-                if completed == total:
-                    self.update_progress.emit(100, "Update process completed.")
-                    self.completed.emit()
-
-            threads = [threading.Thread(target=process_app_thread, args=(app,)) for app in app_list]
-
-            for thread in threads:
-                thread.start()
-
-            for thread in threads:
-                thread.join()
+            if self.completed_count == total:
+                self.update_progress.emit(100, "Update process completed.")
+                self.completed.emit()
 
         except Exception as e:
             logging.error(f"System error during update: {e}", exc_info=True)
             self.update_progress.emit(-1, f"System Error: {str(e)}")
+
+    async def process_app_and_update_status(self, app, total):
+        """Process an app and update the progress."""
+        try:
+            update_status = await self.process_app(app)
+            async with self.lock:
+                self.completed_count += 1
+                progress = int((self.completed_count / total) * 100)
+            self.update_progress.emit(progress, f"{update_status}: {app['name']}")
+
+        except Exception as e:
+            logging.error(f"Error processing {app}: {e}", exc_info=True)
 
     def is_valid_app(self, app):
         """Validate app structure."""
         required_keys = {'name', 'version', 'ident'}
         return isinstance(app, dict) and required_keys.issubset(app.keys())
 
-    def process_app(self, app) -> str:
+    async def process_app(self, app):
         """Handle each app update."""
         try:
             handler = self.get_handler(app.get('name', '').lower())
@@ -90,50 +94,68 @@ class UpdateManager(QObject):
                 return "Successfully updated" if handler(app) else "No available update"
 
             logging.info(f"Updating {app['name']} using winget.")
-            updated = self.winget_update(app)
+            updated = await self.winget_update(app)
             return "Successfully updated" if updated else "No available update"
 
         except Exception as e:
             logging.error(f"Error processing {app}: {e}", exc_info=True)
             return "Could not be updated"
 
-    def get_handler(self, app_name: str) -> Optional[callable]:
+    def get_handler(self, app_name):
         """Get a specialized handler for known applications."""
         return self.handlers.get(app_name)
 
-    def handle_common_app(self, app: Dict) -> bool:
+    def handle_common_app(self, app):
         """Generic handler for all known apps in APP_APIS."""
         app_name = app['name'].lower()
-
         latest = get_latest_version(app_name)
         if latest and app['version'] != latest:
             logging.info(f"Updating {app['name']} from {app['version']} to {latest}")
             return self.run_update_command(f'winget upgrade --name "{app["name"]}" --silent')
         return False
 
-    def winget_update(self, app: Dict) -> bool:
+    async def winget_update(self, app):
         """Fallback to winget for unknown apps."""
+        tasks = []
         for option in ['--name', '--id']:
-            try:
-                result = subprocess.run(
-                    f'winget upgrade {option} "{app.get("name" if option == "--name" else "ident", "")}" --silent',
-                    shell=True,
-                    check=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    timeout=30
-                )
-                if "No installed package" in result.stdout or "No available upgrade" in result.stdout:
-                    continue
+            tasks.append(self.run_winget_update_option(app, option))
+
+        # Wait for all options concurrently
+        results = await asyncio.gather(*tasks)
+        return any(results)
+
+    async def run_winget_update_option(self, app, option):
+        """Run winget update for a specific option."""
+        try:
+            process = await asyncio.create_subprocess_shell(
+                f'winget upgrade {option} "{app.get("name" if option == "--name" else "ident", "")}" --silent',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+
+            stdout, stderr = await process.communicate()
+            result_stdout = stdout.decode()
+            result_stderr = stderr.decode()
+
+            # Check for messages indicating the app was already up-to-date
+            if "No installed package" in result_stdout or "No available upgrade" in result_stdout:
+                logging.info(f"{app.get('name', 'Unknown')} is already up to date or not installed.")
+                return False
+
+            # Check if the upgrade was successful based on stdout content or return code
+            if "Success" in result_stdout or process.returncode == 0:
+                logging.info(f"Successfully updated {app.get('name', 'Unknown')}")
                 return True
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-                logging.warning(f"Failed using {option} for {app.get('name', 'unknown')}.")
 
-        return False
+            logging.warning(f"Update for {app.get('name', 'Unknown')} failed: {stderr}")
+            return False
 
-    def run_update_command(self, command: str) -> bool:
-        """Execute a shell command to run updates."""
+        except Exception as e:
+            logging.warning(f"Failed using {option} for {app.get('name', 'unknown')}: {e}")
+            return False
+
+    def run_update_command(self, command):
+        """Execute a shell command to run updates. This does not need to be async."""
         try:
             result = subprocess.run(
                 command,
@@ -144,9 +166,15 @@ class UpdateManager(QObject):
                 text=True,
                 timeout=30
             )
+
+            # Check if the upgrade was successful based on stdout content
             if "No installed package" in result.stdout or "No available upgrade" in result.stdout:
                 return False
-            return True
+            if "Success" in result.stdout:
+                logging.info(f"Update command succeeded: {command}")
+                return True
+            return False
+
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             logging.warning(f"Command timed out or failed: {command}")
             return False
