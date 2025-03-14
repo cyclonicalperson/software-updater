@@ -48,7 +48,7 @@ class UpdateManager(QObject):
                     continue
                 if not self.active:
                     continue
-                self.update_app_being_processed.emit(app['name'])
+                # self.update_app_being_processed.emit(app['name'])
                 if app['name'] in exclusions:
                     update_status = f"Update skipped: {app['name']}"
                     progress = int((self.completed_count / total) * 100)
@@ -71,10 +71,13 @@ class UpdateManager(QObject):
     async def process_app_and_update_status(self, app, total):
         """Process an app and update the progress."""
         try:
+            self.update_app_being_processed.emit(app['name'])
             update_status = await self.process_app(app)
-            async with self.lock:
+
+            async with self.lock:  # Lock only for shared variable updates
                 self.completed_count += 1
                 progress = int((self.completed_count / total) * 100)
+
             self.update_progress.emit(progress, f"{update_status}: {app['name']}")
 
         except Exception as e:
@@ -116,17 +119,24 @@ class UpdateManager(QObject):
 
     async def winget_update(self, app):
         """Fallback to winget for unknown apps."""
-        tasks = []
-        for option in ['--name', '--id']:
-            tasks.append(self.run_winget_update_option(app, option))
+        updated = False  # Track if update was successful
 
-        # Wait for all options concurrently
-        results = await asyncio.gather(*tasks)
-        return any(results)
+        for option in ['--name', '--id']:
+            if not self.active:
+                return False
+
+            # Emit signal without holding the lock
+            self.update_app_being_processed.emit(app['name'])
+
+            if await self.run_winget_update_option(app, option):
+                updated = True
+
+        return updated
 
     async def run_winget_update_option(self, app, option):
         """Run winget update for a specific option."""
         try:
+            # Start subprocess for winget update
             process = await asyncio.create_subprocess_shell(
                 f'winget upgrade {option} "{app.get("name" if option == "--name" else "ident", "")}" --silent',
                 stdout=subprocess.PIPE,
