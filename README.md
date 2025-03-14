@@ -54,7 +54,10 @@ Or execute the compiled `.exe` from the `dist/` folder.
 ```
 software-updater/
 ├── gui.py              # Main GUI application
-├── registry_reader.py  # Logic to read Windows registry
+├── app_detector.py     # Logic to read Windows registry
+├── app_endpoints.py    # Fixed API endpoints for common applications
+├── updater.py          # Logic to automatically update applications
+├── exclusions.json     # List of exclusions
 ├── icon.ico            # Application icon
 ├── README.md           # Project documentation
 └── requirements.txt    # Python dependencies
