@@ -1,2 +1,5 @@
 PyQt6
 requests
+
+# Ensure Windows Package Manager (winget) is installed:
+# Download: https://aka.ms/getwinget
