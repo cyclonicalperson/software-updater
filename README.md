@@ -1,5 +1,70 @@
-# software-updater
-Windows app for automatically detecting and updating all installed software
+# Software Updater
 
-The app detects all installed apps in the Windows Registry and updates it with WinReg
-Some apps may fail to find updates if they do not exist in WinReg or the common app list
+An Windows application for the automated updating of apps installed on the system.<br>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/f21ce4f7-4598-4eec-9fca-67d38fb22f72" />
+</p>
+
+## Features
+
+- Scans installed applications from both 32-bit and 64-bit registry paths
+- Updates all applications with the click of a button
+- Lightweight and fast
+- Packaged as a standalone portable `.exe`
+
+## Requirements
+
+- Windows OS
+- winget (Install at https://aka.ms/getwinget)
+- Python 3.10 or later (for development)
+
+## Installation (for development)
+
+1. Clone the repository:
+
+    ```bash
+    git clone https://github.com/cyclonicalperson/software-updater.git
+    cd software-updater
+    ```
+
+2. Install dependencies:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3. Build the executable (optional):
+
+    ```bash
+    pyinstaller --onefile --noconsole --icon=icon.ico gui.py
+    ```
+
+## Usage
+
+Run the application:
+
+```bash
+python gui.py
+```
+
+Or execute the compiled `.exe` from the `dist/` folder.
+
+## Directory Structure
+
+```
+software-updater/
+├── gui.py              # Main GUI application
+├── registry_reader.py  # Logic to read Windows registry
+├── icon.ico            # Application icon
+├── README.md           # Project documentation
+└── requirements.txt    # Python dependencies
+```
+
+## Contributing
+
+Feel free to open issues or submit pull requests for improvements or bug fixes.
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
+
