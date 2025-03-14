@@ -1,5 +1,6 @@
 import sys
 import json
+import subprocess
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton,
                              QVBoxLayout, QWidget, QProgressBar, QTextEdit, QHBoxLayout,
                              QGroupBox)
@@ -11,6 +12,7 @@ from updater import UpdateManager
 # Constants
 EXCLUSIONS_FILE = "exclusions.json"
 
+
 def load_exclusions():
     try:
         with open(EXCLUSIONS_FILE, 'r') as f:
@@ -18,9 +20,19 @@ def load_exclusions():
     except (FileNotFoundError, json.JSONDecodeError):
         return []
 
+
 def save_exclusions(exclusions):
     with open(EXCLUSIONS_FILE, 'w') as f:
         json.dump(exclusions, f)
+
+
+def check_winget():
+    try:
+        subprocess.run(["winget", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
 
 class UpdateWorker(QRunnable):
     def __init__(self, manager, app_list):
@@ -31,12 +43,13 @@ class UpdateWorker(QRunnable):
     def run(self):
         self.manager.check_and_install(self.app_list)
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Software Updater")
         self.setGeometry(100, 100, 600, 600)
-        # self.setWindowIcon(QIcon("icon.ico"))  # Add icon
+        self.setWindowIcon(QIcon("icon.ico"))
         self.threadpool = QThreadPool()
         self.manager = UpdateManager()
         self.exclusions = load_exclusions()
@@ -51,12 +64,12 @@ class MainWindow(QMainWindow):
         # App list group box
         app_list_group = QGroupBox()
         app_list_group.setTitle("Installed Apps")
-        app_list_group.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center title
+        app_list_group.setAlignment(Qt.AlignmentFlag.AlignCenter)
         app_list_layout = QVBoxLayout()
         app_list_layout.setSpacing(5)
 
         self.list_widget = QListWidget()
-        self.list_widget.setFont(QFont("Arial", 10))  # Clear font
+        self.list_widget.setFont(QFont("Arial", 10))
         app_list_layout.addWidget(self.list_widget)
 
         app_list_group.setLayout(app_list_layout)
@@ -68,12 +81,12 @@ class MainWindow(QMainWindow):
 
         self.exclude_btn = QPushButton("Exclude Selected")
         self.exclude_btn.clicked.connect(self.exclude_app)
-        self.exclude_btn.setEnabled(False)  # Initially disabled
+        self.exclude_btn.setEnabled(False)
         btn_layout.addWidget(self.exclude_btn)
 
         self.include_btn = QPushButton("Include Selected")
         self.include_btn.clicked.connect(self.include_app)
-        self.include_btn.setEnabled(False)  # Initially disabled
+        self.include_btn.setEnabled(False)
         btn_layout.addWidget(self.include_btn)
 
         layout.addLayout(btn_layout)
@@ -81,7 +94,7 @@ class MainWindow(QMainWindow):
         # Exclusion list group box
         exclusion_list_group = QGroupBox()
         exclusion_list_group.setTitle("Excluded Apps")
-        exclusion_list_group.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center title
+        exclusion_list_group.setAlignment(Qt.AlignmentFlag.AlignCenter)
         exclusion_list_layout = QVBoxLayout()
         exclusion_list_layout.setSpacing(5)
 
@@ -122,6 +135,10 @@ class MainWindow(QMainWindow):
         # Connect update signals
         self.manager.update_progress.connect(self.update_status)
         self.manager.completed.connect(self.on_complete)
+
+        # Check for winget
+        if not check_winget():
+            self.status_box.append("<p style='background-color:#FF7F7F; border: 1px solid #8B0000;'>winget not found. Please install it from https://aka.ms/getwinget</p>")
 
         # Load apps
         self.populate_app_list()
@@ -185,8 +202,6 @@ class MainWindow(QMainWindow):
             self.status_box.append(f"<p style='background-color:#90EE90; border: 1px solid #008000;'>{message}</p>")
         elif "Could not be updated" in message:
             self.status_box.append(f"<p style='background-color:#FF7F7F; border: 1px solid #8B0000;'>{message}</p>")
-        elif "Update skipped" in message:
-            self.status_box.append(f"<p style='background-color:#f0e769; border: 1px solid #d6ca1a;'>{message}</p>")
         else:
             self.status_box.append(message)
 
