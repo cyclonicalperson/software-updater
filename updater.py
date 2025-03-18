@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import subprocess
 import asyncio
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -8,16 +9,29 @@ from app_endpoints import get_latest_version
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-EXCLUSIONS_FILE = "exclusions.json"
+EXCLUSIONS_DIR = os.path.join(os.getenv("LOCALAPPDATA"), "Software Updater")
+EXCLUSIONS_FILE = os.path.join(EXCLUSIONS_DIR, "exclusions.json")
+
+# Ensure the exclusions directory exists
+os.makedirs(EXCLUSIONS_DIR, exist_ok=True)
 
 
 def load_exclusions():
-    """Load exclusions from the exclusions.json file."""
+    """Load exclusions from the exclusions.json file in AppData."""
     try:
         with open(EXCLUSIONS_FILE, 'r') as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return []
+
+
+def save_exclusions(exclusions):
+    """Save exclusions to the exclusions.json file in AppData."""
+    try:
+        with open(EXCLUSIONS_FILE, 'w') as f:
+            json.dump(exclusions, f, indent=4)
+    except Exception as e:
+        logging.error(f"Failed to save exclusions: {e}")
 
 
 class UpdateManager(QObject):
