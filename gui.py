@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 import subprocess
@@ -11,10 +12,15 @@ from app_detector import get_installed_apps
 from updater import UpdateManager
 
 # Constants
-EXCLUSIONS_FILE = "exclusions.json"
+EXCLUSIONS_DIR = os.path.join(os.getenv("LOCALAPPDATA"), "Software Updater")
+EXCLUSIONS_FILE = os.path.join(EXCLUSIONS_DIR, "exclusions.json")
+
+# Ensure the exclusions directory exists
+os.makedirs(EXCLUSIONS_DIR, exist_ok=True)
 
 
 def load_exclusions():
+    """Load exclusions from the exclusions.json file in AppData."""
     try:
         with open(EXCLUSIONS_FILE, 'r') as f:
             return json.load(f)
@@ -23,8 +29,9 @@ def load_exclusions():
 
 
 def save_exclusions(exclusions):
+    """Save exclusions to the exclusions.json file in AppData."""
     with open(EXCLUSIONS_FILE, 'w') as f:
-        json.dump(exclusions, f)
+        json.dump(exclusions, f, indent=4)
 
 
 def check_winget():
