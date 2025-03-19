@@ -69,5 +69,5 @@ Feel free to open issues or submit pull requests for improvements or bug fixes.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+GPL-3.0 License. See [LICENSE](LICENSE) for details.
 
