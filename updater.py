@@ -46,6 +46,7 @@ class UpdateManager(QObject):
         self.completed_count = 0  # Initialize count of completed updates
         self.lock = asyncio.Lock()  # Add a lock for shared variables
         self.semaphore = asyncio.Semaphore(2)  # Limit to 2 concurrent updates
+        self.total_apps = 0  # Total number of apps to update
 
     async def check_and_install(self, app_list):
         """Main update process with progress tracking and concurrency control."""
@@ -54,32 +55,46 @@ class UpdateManager(QObject):
             if isinstance(app_list, dict):
                 app_list = [app_list]
 
-            total = len(app_list)
-            self.completed_count = 0
+            filtered_app_list = [app for app in app_list
+                                 if app['name'] not in exclusions and self.is_valid_app(app)]
+            self.total_apps = len(filtered_app_list)
+            self.completed_count = 0  # Reset completed count
+            logging.info(f"Total apps to update: {self.total_apps}")
+
+            if not filtered_app_list:
+                self.update_progress.emit(100, "No updates available.")
+                self.completed.emit()
+                return
 
             tasks = [
-                self.run_with_semaphore(self.process_app_and_update_status, app, total)
-                for app in app_list if app['name'] not in exclusions and self.is_valid_app(app)
+                self.run_with_semaphore(self.process_app_and_update_status, app)
+                for app in filtered_app_list
             ]
 
             # Run all tasks concurrently but limited by the semaphore
             await asyncio.gather(*tasks)
 
             # Ensure completion signal is emitted when all tasks are done
-            if self.completed_count >= total:
+            if self.completed_count >= self.total_apps:
                 self.update_progress.emit(100, "Update process completed.")
+                self.completed.emit()
+            else:
+                logging.warning(f"Completed {self.completed_count} out of {self.total_apps} updates.")
+                self.update_progress.emit(int((self.completed_count / self.total_apps) * 100),
+                                            "Update process finished with possible errors.")
                 self.completed.emit()
 
         except Exception as e:
             logging.error(f"System error during update: {e}", exc_info=True)
             self.update_progress.emit(-1, f"System Error: {str(e)}")
+            self.completed.emit()  # Ensure completion signal is always emitted
 
-    async def run_with_semaphore(self, func, *args):
+    async def run_with_semaphore(self, func, app):
         """Run a task with semaphore control."""
         async with self.semaphore:
-            return await func(*args)
+            return await func(app)
 
-    async def process_app_and_update_status(self, app, total):
+    async def process_app_and_update_status(self, app):
         """Process an app and update the progress."""
         try:
             self.update_app_being_processed.emit(app['name'])
@@ -87,7 +102,7 @@ class UpdateManager(QObject):
 
             async with self.lock:  # Lock for shared variable updates
                 self.completed_count += 1
-                progress = int((self.completed_count / total) * 100)
+                progress = int((self.completed_count / self.total_apps) * 100) if self.total_apps > 0 else 100
                 self.update_progress.emit(progress, f"{update_status}: {app['name']}")
 
         except Exception as e:
@@ -145,7 +160,6 @@ class UpdateManager(QObject):
     async def run_winget_update_option(self, app, option):
         """Run winget update for a specific option."""
         try:
-            # Start subprocess for winget update
             process = await asyncio.create_subprocess_shell(
                 f'winget upgrade {option} "{app.get("name" if option == "--name" else "ident", "")}" --silent',
                 stdout=subprocess.PIPE,
@@ -184,7 +198,7 @@ class UpdateManager(QObject):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                timeout=30,
+                timeout=30
             )
 
             # Check if the upgrade was successful based on stdout content
@@ -197,6 +211,6 @@ class UpdateManager(QObject):
 
             return False
 
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-            logging.warning(f"Command timed out or failed: {command}, Error: {e}")
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            logging.warning(f"Command timed out or failed: {command}")
             return False

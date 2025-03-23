@@ -55,6 +55,7 @@ APP_APIS = {
     'ccleaner': 'https://www.ccleaner.com/ccleaner/download',
 }
 
+
 def get_latest_version(app_name: str) -> str:
     """
     Fetch the latest version for a known application.
