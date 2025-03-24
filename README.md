@@ -14,9 +14,29 @@ An Windows application for the automated updating of apps installed on the syste
 
 ## Requirements
 
-- Windows OS
+- Windows 10/11 (Older versions not supported)
 - winget (Install at https://aka.ms/getwinget)
 - Python 3.10 or later (for development)
+
+## Usage
+
+Run the compiled `.exe` from the `dist/` folder.
+
+Or run the `.py` file:
+
+```bash
+python gui.py
+```
+
+## FAQ
+**- Can the application update all apps?<br>**
+No, only apps present in winget (Windows Package Manager) or the fixed API list can be updated.<br>
+This does not include more uncommon apps.<br><br>
+
+**- How does the exclusion list work?<br>**
+Any app in the installed apps list can be selected and excluded by clicking the 'Exclude Selected' button.<br>
+Apps can be returned back to the installed apps list by selecting an app in the exclusion list and pressing the 'Include Selected' button.<br>
+Any apps in the exclusion list will have their updates skipped.
 
 ## Installation (for development)
 
@@ -39,16 +59,6 @@ An Windows application for the automated updating of apps installed on the syste
     pyinstaller --onefile --noconsole --icon=icon.ico --name="Software Updater" gui.py
     ```
 
-## Usage
-
-Run the application:
-
-```bash
-python gui.py
-```
-
-Or execute the compiled `.exe` from the `dist/` folder.
-
 ## Directory Structure
 
 ```
@@ -57,7 +67,6 @@ software-updater/
 ├── app_detector.py     # Logic to read Windows registry
 ├── app_endpoints.py    # Fixed API endpoints for common applications
 ├── updater.py          # Logic to automatically update applications
-├── exclusions.json     # List of exclusions
 ├── icon.ico            # Application icon
 ├── README.md           # Project documentation
 └── requirements.txt    # Python dependencies
