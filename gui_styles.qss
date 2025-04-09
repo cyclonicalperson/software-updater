@@ -1,0 +1,135 @@
+QMainWindow {
+    background-color: #121212;
+    color: #FFFFFF;
+}
+
+QGroupBox {
+    border: 1px solid #333;
+    border-radius: 8px;
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #1e1e1e;
+}
+
+QGroupBox::title {
+    color: #00ADB5;
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 3px;
+}
+
+QListWidget {
+    background-color: #232323;
+    color: #ffffff;
+    border: none;
+    padding: 5px;
+}
+
+QListWidget::item:selected {
+    background-color: #444;
+    color: #f0f0f0;
+}
+
+QPushButton {
+    background-color: #00ADB5;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+QPushButton:disabled {
+    background-color: #444;
+    color: #999;
+}
+
+QPushButton:hover {
+    background-color: #06c7d8;
+}
+
+QPushButton:pressed {
+    background-color: #02889b;
+}
+
+QTextEdit {
+    background-color: #202020;
+    color: #f8f8f2;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+QProgressBar {
+    height: 20px;
+    text-align: center;
+    border: 1px solid #555;
+    border-radius: 5px;
+    background-color: #2e2e2e;
+    color: white;
+}
+
+QProgressBar::chunk {
+    background-color: #00ADB5;
+    width: 10px;
+    margin: 1px;
+}
+
+QStatusBar {
+    background-color: #1a1a1a;
+    color: #888;
+    border-top: 1px solid #333;
+}
+
+[navButton="true"] {
+    background-color: #2e2e2e;
+    color: #ffffff;
+    padding: 10px;
+    font-weight: bold;
+    border-radius: 0;
+}
+
+[navButton="true"]:hover {
+    background-color: #444;
+    color: #f0f0f0;
+}
+
+[navButton="true"][active="true"] {
+    background-color: #00ADB5;
+    color: #fff;
+}
+
+QScrollBar:vertical {
+    background: #1e1e1e;
+    width: 12px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #00ADB5;
+    min-height: 20px;
+    border-radius: 6px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    background: none;
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: #1e1e1e;
+    height: 12px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #00ADB5;
+    min-width: 20px;
+    border-radius: 6px;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    background: none;
+    width: 0px;
+}
