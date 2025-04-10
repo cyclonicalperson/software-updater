@@ -147,7 +147,6 @@ def get_installed_apps():
         # Parse winget list output
         winget_lines = winget_result.stdout.splitlines()[8:]
         winget_lines = [line.strip().replace('â€¦', '   ') for line in winget_lines if line.strip()]
-        print(winget_lines)
 
         # Create a list to store app details
         apps = []
@@ -160,7 +159,10 @@ def get_installed_apps():
 
             if match:
                 # Splits the match into the found components
-                parts = re.split(r"\s{2,}", line.strip())
+                parts = re.split(r'\s{2,}', line)
+
+                if len(parts) < 3:
+                    continue  # Skip malformed lines
 
                 winget_name = parts[0]
                 app_id = parts[1]
@@ -168,13 +170,11 @@ def get_installed_apps():
                 available = ''
                 source = ''
 
-                # If an app has both an available update and source parse it
-                if len(parts) == 5:
+                if len(parts) >= 5:
                     available = parts[3]
                     source = parts[4]
-                # Otherwise check which was found
                 elif len(parts) == 4:
-                    # Heuristic: if part[3] looks like a version (e.g., digits and dots), it's available, otherwise source
+                    # Heuristic for version-vs-source
                     if re.match(r"^\d+(\.\d+)*$", parts[3]):
                         available = parts[3]
                     else:

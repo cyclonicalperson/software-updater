@@ -1,9 +1,37 @@
+import asyncio
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar,
                              QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QRunnable, pyqtSignal, QObject, pyqtSlot, QThreadPool
 from PyQt6.QtGui import QIcon, QFont
 import gui_functions
+from updater import UpdateManager
+
+
+class AsyncSignals(QObject):
+    finished = pyqtSignal()
+    error = pyqtSignal(str)
+
+
+class AsyncWorker(QRunnable):
+    def __init__(self, async_func, *args):
+        super().__init__()
+        self.async_func = async_func
+        self.args = args
+        self.signals = AsyncSignals()
+
+    @pyqtSlot()
+    def run(self):
+        print("[AsyncWorker] Starting event loop")
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(self.async_func(*self.args))
+        except Exception as e:
+            self.signals.error.emit(str(e))
+            print(f"AsyncWorker error: {e}")
+        finally:
+            self.signals.finished.emit()
 
 
 class MainWindow(QMainWindow):
@@ -13,11 +41,17 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 600, 565)
         self.setWindowIcon(QIcon("icon.ico"))
 
+        # Fetch the app lists
         self.exclusions_list = gui_functions.load_exclusions()
         self.apps_list = gui_functions.get_installed_apps()
         self.updates_list = gui_functions.get_update_list(self.apps_list, self.exclusions_list)
         self.unsupported_apps_list = gui_functions.get_unsupported_list(self.apps_list)
 
+        # Set up variables for QThread
+        self.threadpool = QThreadPool()
+        self.manager = UpdateManager()
+
+        # Stylize the UI
         self._init_ui()
         self.load_styles()
 
@@ -148,6 +182,11 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentIndex(index)
         self.update_button_states()
 
+    def refresh_app_lists(self):
+        """Recheck which apps have available updates after the update process and update the lists."""
+        self.apps_list = gui_functions.get_installed_apps()
+        self.updates_list = gui_functions.get_update_list(self.apps_list, self.exclusions_list)
+
     def get_selected_item(self, index):
         """Returns which app is selected in the index's list."""
         if index == 0:  # Available Updates
@@ -240,16 +279,26 @@ class MainWindow(QMainWindow):
                 self.update_button_states()
 
     def start_update(self):
-        """Starts the update process for all apps on the update list."""
-        """self.status_box.clear()
+        self.status_box.clear()
         self.progress_bar.setValue(0)
-        app_list = [app for app in get_installed_apps() if app['name'] not in self.exclusions]
 
-        # Call async function using QThreadPool, passing the loop
-        async_worker = AsyncWorker(self.manager.check_and_install, app_list, loop=self.loop)
-        async_worker.signals.finished.connect(lambda: self.status_bar.showMessage("All updates completed!", 3000))
+        # Safety: filter out broken entries
+        clean_updates = [app for app in self.updates_list if isinstance(app, dict) and "name" in app and "id" in app]
+        if not clean_updates:
+            self.status_box.append("<font color='red'>No valid apps to update.</font>")
+            return
+
+        # Connect signals
+        self.manager.update_progress.connect(self.update_status)
+        self.manager.update_app_being_processed.connect(
+            lambda name: self.status_box.append(f"Processing: {name}")
+        )
+        self.manager.completed.connect(lambda: self.status_box.append("All updates completed!"))
+
+        # Launch update process
+        async_worker = AsyncWorker(self.manager.check_and_install, clean_updates)
         async_worker.signals.error.connect(self.show_error_message)
-        self.threadpool.start(async_worker)"""
+        self.threadpool.start(async_worker)
 
     def update_status(self, progress, message):
         self.progress_bar.setValue(progress)
