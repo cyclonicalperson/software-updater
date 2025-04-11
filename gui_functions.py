@@ -150,6 +150,7 @@ def get_installed_apps():
 
         # Create a list to store app details
         apps = []
+        used_names = set()
         for line in winget_lines:
             # Regex to match name, id, version, available, and source
             match = re.match(
@@ -180,8 +181,11 @@ def get_installed_apps():
                     else:
                         source = parts[3]
 
+                resolved_name = get_best_full_name(winget_name, full_names, used_names)
+                used_names.add(resolved_name)
+
                 apps.append({
-                    "name": get_best_full_name(winget_name, full_names),
+                    "name": resolved_name,
                     "id": app_id,
                     "version": version,
                     "available": available,
@@ -214,22 +218,24 @@ def get_unsupported_list(apps_list):
     return apps
 
 
-def get_best_full_name(raw_name, full_names):
+def get_best_full_name(raw_name, full_names, used_names):
     raw_name = raw_name.strip()
 
     # Tier 1: Exact match
-    if raw_name in full_names:
+    if raw_name in full_names and raw_name not in used_names:
         return raw_name
 
-    # Tier 2: Startswith match (return best if multiple)
-    startswith_matches = [name for name in full_names if name.startswith(raw_name)]
+    # Tier 2: Startswith match (prefer longest, unused)
+    startswith_matches = [name for name in full_names if name.startswith(raw_name) and name not in used_names]
     if startswith_matches:
-        return max(startswith_matches, key=lambda name: len(name))  # prefer longer
+        return max(startswith_matches, key=lambda name: len(name))
 
-    # Tier 3: Fuzzy match using similarity
-    best_match = difflib.get_close_matches(raw_name, full_names, n=1, cutoff=0.6)
-    if best_match:
-        return best_match[0]
+    # Tier 3: Fuzzy match — ensure uniqueness
+    fuzzy_matches = difflib.get_close_matches(raw_name, full_names, n=5, cutoff=0.6)
+    for match in fuzzy_matches:
+        if match not in used_names:
+            return match
 
     # Fallback
     return raw_name
+
