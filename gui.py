@@ -1,5 +1,7 @@
 import asyncio
+import os
 import sys
+import importlib.resources as pkg_resources
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar,
                              QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSignal, QObject, pyqtSlot, QThreadPool
@@ -56,8 +58,20 @@ class MainWindow(QMainWindow):
         self.load_styles()
 
     def load_styles(self):
-        with open("gui_styles.qss", "r") as f:
-            self.setStyleSheet(f.read())
+        try:
+            if getattr(sys, 'frozen', False):
+                # Running as compiled .exe
+                base_path = sys._MEIPASS
+            else:
+                # Running from source
+                base_path = os.path.dirname(os.path.abspath(__file__))
+
+            qss_path = os.path.join(base_path, "gui_styles.qss")
+            with open(qss_path, "r", encoding="utf-8") as f:
+                self.setStyleSheet(f.read())
+
+        except Exception as e:
+            print(f"[Style Load Error] {e}")
 
     def _init_ui(self):
         central_widget = QWidget()
