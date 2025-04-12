@@ -113,13 +113,19 @@ class MainWindow(QMainWindow):
         button_layout_top.addWidget(self.toggle_btn)
         main_layout.addLayout(button_layout_top)
 
-        # Start Updates button
+        # Update All Apps button
         button_layout_bottom = QHBoxLayout()
-        self.start_btn = QPushButton("Start Updates")
+        self.start_btn = QPushButton("Update All Apps")
         self.start_btn.setMaximumWidth(int(self.width() * 0.55))  # The button will be 55% of the screen size
         self.start_btn.clicked.connect(lambda: self.start_update(self.updates_list))
 
+        # Update Selected Apps button
+        self.selected_btn = QPushButton("Update Selected Apps")
+        self.selected_btn.setEnabled(False)
+        self.selected_btn.clicked.connect(self.update_selected_apps)
+
         button_layout_bottom.addWidget(self.start_btn)
+        button_layout_bottom.addWidget(self.selected_btn)
         main_layout.addLayout(button_layout_bottom)
 
         # Concurrency Control
@@ -166,7 +172,6 @@ class MainWindow(QMainWindow):
         self.update_button_states()
 
     def create_list_view(self, title, data_list):
-        """Creates the lists for the QStackedWidget widget with app names and versions."""
         box = QGroupBox(title)
         layout = QVBoxLayout()
         list_widget = QListWidget()
@@ -187,12 +192,20 @@ class MainWindow(QMainWindow):
             item = QListWidgetItem(text)
             item.setData(Qt.ItemDataRole.UserRole, app)
 
+            # Set checkbox only for update list
+            if title == "Apps to Update":
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(Qt.CheckState.Unchecked)
+
             if app.get("source", "") == "":
                 font = item.font()
                 font.setItalic(True)
                 item.setFont(font)
 
             list_widget.addItem(item)
+
+        if title == "Apps to Update":
+            list_widget.itemChanged.connect(self.update_button_states)
 
         layout.addWidget(list_widget)
         list_widget.sortItems(Qt.SortOrder.AscendingOrder)
@@ -234,22 +247,26 @@ class MainWindow(QMainWindow):
         current_index = self.stack.currentIndex()
         selected_item = self.get_selected_item(current_index)
 
-        # Enable/Disable the button based on selection
-        has_selected_item = bool(selected_item)
-        self.toggle_btn.setEnabled(has_selected_item)
+        # Enable/disable the toggle button based on selection
+        self.toggle_btn.setEnabled(bool(selected_item))
 
-        # Change the button text and functionality based on the current view
+        # Change toggle button text based on view
         if current_index == 1:  # Excluded Apps
             self.toggle_btn.setText("Restore Updates for Selected App")
-            self.toggle_btn.clicked.disconnect()  # Disconnect previous action
-            self.toggle_btn.clicked.connect(self.include_app)  # Connect to 'include' action
-        else:  # Available Updates or Installed Apps
+            self.toggle_btn.clicked.disconnect()
+            self.toggle_btn.clicked.connect(self.include_app)
+        else:
             self.toggle_btn.setText("Skip Updates for Selected App")
-            self.toggle_btn.clicked.disconnect()  # Disconnect previous action
-            self.toggle_btn.clicked.connect(self.exclude_app)  # Connect to 'exclude' action
+            self.toggle_btn.clicked.disconnect()
+            self.toggle_btn.clicked.connect(self.exclude_app)
 
-        # Enable "Start Updates" button if there are items in the "Available Updates" list
+        # Enable "Start Updates" if update list has entries
         self.start_btn.setEnabled(bool(self.view_widgets["updates"].findChild(QListWidget).count()))
+
+        # Enable "Update Selected Apps" if at least one checkbox is checked
+        update_list = self.view_widgets["updates"].findChild(QListWidget)
+        has_checked = any(update_list.item(i).checkState() == Qt.CheckState.Checked for i in range(update_list.count()))
+        self.selected_btn.setEnabled(has_checked)
 
     def exclude_app(self):
         selected_item = self.get_selected_item(self.stack.currentIndex())[0]
@@ -328,18 +345,45 @@ class MainWindow(QMainWindow):
         self.threadpool.start(async_worker)
 
     def on_update_complete(self):
-        self.apps_list = gui_functions.get_installed_apps()
         self.updates_list = gui_functions.get_update_list(self.apps_list, self.exclusions_list)
 
         updates_widget = self.view_widgets["updates"].findChild(QListWidget)
+        updates_widget.blockSignals(True)  # Prevent premature signal triggering
         updates_widget.clear()
-        for app in self.updates_list:
-            item = QListWidgetItem(f"{app['name']} - {app['version']} -> {app['available']}")
-            item.setData(Qt.ItemDataRole.UserRole, app)
-            updates_widget.addItem(item)
-        updates_widget.sortItems(Qt.SortOrder.AscendingOrder)
 
+        for app in self.updates_list:
+            name = app.get("name", "Unknown")
+            version = app.get("version", "Unknown")
+            available = app.get("available", "Unknown")
+
+            item = QListWidgetItem(f"{name} - {version} -> {available}")
+            item.setData(Qt.ItemDataRole.UserRole, app)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Unchecked)
+
+            if app.get("source", "") == "":
+                font = item.font()
+                font.setItalic(True)
+                item.setFont(font)
+
+            updates_widget.addItem(item)
+
+        updates_widget.sortItems(Qt.SortOrder.AscendingOrder)
+        updates_widget.blockSignals(False)
         self.update_button_states()
+
+    def update_selected_apps(self):
+        list_widget = self.view_widgets["updates"].findChild(QListWidget)
+        selected_apps = []
+
+        for i in range(list_widget.count()):
+            item = list_widget.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                app = item.data(Qt.ItemDataRole.UserRole)
+                if app:
+                    selected_apps.append(app)
+
+        self.start_update(apps_to_update=selected_apps)
 
     def update_status(self, progress, message):
         self.progress_bar.setValue(progress)
