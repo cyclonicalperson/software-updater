@@ -104,30 +104,22 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(self.stack)
 
-        # Buttons
+        # Include/Exclude button
         button_layout_top = QHBoxLayout()
-        self.exclude_btn = QPushButton("Skip Updates for Selected App")
-        self.include_btn = QPushButton("Restore Updates for Selected App")
-        self.start_btn = QPushButton("Start Updates")
+        self.toggle_btn = QPushButton("Skip Updates for Selected App")  # Default text
+        self.toggle_btn.setEnabled(False)
+        self.toggle_btn.clicked.connect(self.update_button_states)
 
-        # The buttons start as disabled by default
-        for btn in (self.exclude_btn, self.include_btn):
-            btn.setEnabled(False)
-            button_layout_top.addWidget(btn)
-
-        # Connect buttons to their respective functions
-        self.exclude_btn.clicked.connect(self.exclude_app)
-        self.include_btn.clicked.connect(self.include_app)
-        self.start_btn.clicked.connect(self.start_update)
-
+        button_layout_top.addWidget(self.toggle_btn)
         main_layout.addLayout(button_layout_top)
 
+        # Start Updates button
         button_layout_bottom = QHBoxLayout()
+        self.start_btn = QPushButton("Start Updates")
+        self.start_btn.setMaximumWidth(int(self.width() * 0.55))  # The button will be 55% of the screen size
+        self.start_btn.clicked.connect(self.start_update)
 
-        # The button will be 60% of the screen size
         button_layout_bottom.addWidget(self.start_btn)
-        self.start_btn.setMaximumWidth(int(self.width() * 0.55))
-
         main_layout.addLayout(button_layout_bottom)
 
         # Concurrency Control
@@ -232,18 +224,23 @@ class MainWindow(QMainWindow):
         return None
 
     def update_button_states(self):
-        """Updates which buttons can be pressed."""
+        """Updates which buttons can be pressed and adjusts the button text."""
         current_index = self.stack.currentIndex()
         selected_item = self.get_selected_item(current_index)
 
-        # Check if there are selected items and update button states accordingly
+        # Enable/Disable the button based on selection
         has_selected_item = bool(selected_item)
+        self.toggle_btn.setEnabled(has_selected_item)
 
-        # Enable the "Exclude" button when an item is selected in Installed or Updates list
-        self.exclude_btn.setEnabled((current_index == 0 or current_index == 2) and has_selected_item)
-
-        # Enable the "Include" button when an item is selected in the Excluded Apps list
-        self.include_btn.setEnabled(current_index == 1 and has_selected_item)
+        # Change the button text and functionality based on the current view
+        if current_index == 1:  # Excluded Apps
+            self.toggle_btn.setText("Restore Updates for Selected App")
+            self.toggle_btn.clicked.disconnect()  # Disconnect previous action
+            self.toggle_btn.clicked.connect(self.include_app)  # Connect to 'include' action
+        else:  # Available Updates or Installed Apps
+            self.toggle_btn.setText("Skip Updates for Selected App")
+            self.toggle_btn.clicked.disconnect()  # Disconnect previous action
+            self.toggle_btn.clicked.connect(self.exclude_app)  # Connect to 'exclude' action
 
         # Enable "Start Updates" button if there are items in the "Available Updates" list
         self.start_btn.setEnabled(bool(self.view_widgets["updates"].findChild(QListWidget).count()))
