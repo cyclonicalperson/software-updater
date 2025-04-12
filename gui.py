@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
         button_layout_bottom = QHBoxLayout()
         self.start_btn = QPushButton("Start Updates")
         self.start_btn.setMaximumWidth(int(self.width() * 0.55))  # The button will be 55% of the screen size
-        self.start_btn.clicked.connect(self.start_update)
+        self.start_btn.clicked.connect(lambda: self.start_update(self.updates_list))
 
         button_layout_bottom.addWidget(self.start_btn)
         main_layout.addLayout(button_layout_bottom)
@@ -166,16 +166,27 @@ class MainWindow(QMainWindow):
         self.update_button_states()
 
     def create_list_view(self, title, data_list):
-        """Creates the lists for the QStackBox widget."""
+        """Creates the lists for the QStackedWidget widget with app names and versions."""
         box = QGroupBox(title)
         layout = QVBoxLayout()
         list_widget = QListWidget()
         list_widget.setFont(QFont("Arial", 10))
+
         for app in data_list:
             name = app.get("name", "Unknown")
-            item = QListWidgetItem(name)
+            version = app.get("version", "Unknown")
+            available_version = app.get("available", "Unknown")
 
-            # Italicize if unsupported
+            if title == "Apps to Update":
+                text = f"{name} - {version} -> {available_version}"
+            elif title == "Installed Apps":
+                text = f"{name} - {version}"
+            else:
+                text = name
+
+            item = QListWidgetItem(text)
+            item.setData(Qt.ItemDataRole.UserRole, app)
+
             if app.get("source", "") == "":
                 font = item.font()
                 font.setItalic(True)
@@ -207,11 +218,6 @@ class MainWindow(QMainWindow):
         # Switch the view
         self.stack.setCurrentIndex(index)
         self.update_button_states()
-
-    def refresh_app_lists(self):
-        """Recheck which apps have available updates after the update process and update the lists."""
-        self.apps_list = gui_functions.get_installed_apps()
-        self.updates_list = gui_functions.get_update_list(self.apps_list, self.exclusions_list)
 
     def get_selected_item(self, index):
         """Returns which app is selected in the index's list."""
@@ -246,111 +252,93 @@ class MainWindow(QMainWindow):
         self.start_btn.setEnabled(bool(self.view_widgets["updates"].findChild(QListWidget).count()))
 
     def exclude_app(self):
-        """Moves an app from the Updates or Installed Apps list to the Excluded list."""
         selected_item = self.get_selected_item(self.stack.currentIndex())[0]
 
         if selected_item:
-            app_name = selected_item.text()  # Using only app names
-
-            # First, check if the app is in the Updates list
-            app = next((app for app in self.updates_list if app["name"] == app_name), None)
-
-            # If not found in the Updates list, check in the Installed Apps list
-            if not app:
-                app = next((app for app in self.apps_list if app["name"] == app_name), None)
-
+            app = selected_item.data(Qt.ItemDataRole.UserRole)
             if app:
-                # Remove from the Updates list if present
-                if app in self.updates_list:
-                    self.updates_list = [app for app in self.updates_list if app["name"] != app_name]
-                    list_widget = self.view_widgets["updates"].findChild(QListWidget)
-                    list_widget.takeItem(list_widget.row(selected_item))
+                app_name = app.get("name")
 
-                # Add to the Exclusions list
-                self.exclusions_list.append(app)
-                gui_functions.save_exclusions(self.exclusions_list)
+                # Remove from updates list if present
+                self.updates_list = [a for a in self.updates_list if a.get("name") != app_name]
+                updates_widget = self.view_widgets["updates"].findChild(QListWidget)
+                for i in range(updates_widget.count()):
+                    if updates_widget.item(i).data(Qt.ItemDataRole.UserRole).get("name") == app_name:
+                        updates_widget.takeItem(i)
+                        break
 
-                # Add to the Exclusions list widget
-                exclusions_widget = self.view_widgets["excluded"].findChild(QListWidget)
-                exclusions_widget.addItem(app_name)
-                exclusions_widget.sortItems(Qt.SortOrder.AscendingOrder)
+                # Only add to exclusions if not already there
+                if app_name not in [a["name"] for a in self.exclusions_list]:
+                    self.exclusions_list.append(app)
+                    gui_functions.save_exclusions(self.exclusions_list)
 
-                # Update button states after modification
+                    exclusions_widget = self.view_widgets["excluded"].findChild(QListWidget)
+                    item = QListWidgetItem(app_name)
+                    item.setData(Qt.ItemDataRole.UserRole, app)
+                    exclusions_widget.addItem(item)
+                    exclusions_widget.sortItems(Qt.SortOrder.AscendingOrder)
+
                 self.update_button_states()
 
     def include_app(self):
-        """Moves an app from the Excluded list back to the Updates list if it has an available update."""
-        # Get the selected item from the Excluded list
         exclusions_widget = self.view_widgets["excluded"].findChild(QListWidget)
         selected_item = exclusions_widget.selectedItems()[0] if exclusions_widget.selectedItems() else None
 
         if selected_item:
-            app_name = selected_item.text()  # Get the app name from the item text
+            app = selected_item.data(Qt.ItemDataRole.UserRole)
+            app_name = app.get("name")
 
-            # Find the app in the Exclusions list
-            app = next((app for app in self.exclusions_list if app["name"] == app_name), None)
-            if app:
-                # Remove from the Exclusions list
-                self.exclusions_list = [app for app in self.exclusions_list if app["name"] != app_name]
+            # Remove from exclusions list
+            self.exclusions_list = [a for a in self.exclusions_list if a.get("name") != app_name]
+            exclusions_widget.takeItem(exclusions_widget.row(selected_item))
 
-                # Remove from the Excluded list widget
-                exclusions_widget.takeItem(exclusions_widget.row(selected_item))
+            if app.get("available"):
+                # Add back to updates list
+                if app_name not in [a.get("name") for a in self.updates_list]:
+                    self.updates_list.append(app)
 
-                # Check if the app has an available update
-                if app.get("available"):  # Assuming 'available' is the key indicating the update
-                    # The app has an update, so add it back to the Updates list view
-                    updates_widget = self.view_widgets["updates"].findChild(QListWidget)
-                    updates_widget.addItem(app_name)
-                    updates_widget.sortItems(Qt.SortOrder.AscendingOrder)
+                updates_widget = self.view_widgets["updates"].findChild(QListWidget)
+                item = QListWidgetItem(f"{app_name} - {app['version']} -> {app['available']}")
+                item.setData(Qt.ItemDataRole.UserRole, app)
+                updates_widget.addItem(item)
+                updates_widget.sortItems(Qt.SortOrder.AscendingOrder)
 
-                # Save the modified Exclusions list
-                gui_functions.save_exclusions(self.exclusions_list)
+            gui_functions.save_exclusions(self.exclusions_list)
+            self.update_button_states()
 
-                # Update button states after modification
-                self.update_button_states()
-
-    def start_update(self):
+    def start_update(self, apps_to_update):
         self.status_box.clear()
         self.progress_bar.setValue(0)
 
-        # Safety: filter out broken entries
-        clean_updates = [app for app in self.updates_list if isinstance(app, dict) and "name" in app and "id" in app]
+        clean_updates = [app for app in apps_to_update if isinstance(app, dict) and "name" in app and "id" in app]
         if not clean_updates:
             self.status_box.append("<font color='red'>No valid apps to update.</font>")
             return
 
-        # Use the current spinbox value
         self.concurrent_update_number = self.concurrent_spinbox.value()
-
-        # Create the update manager
         self.manager = UpdateManager(concurrent_limit=self.concurrent_update_number)
-
-        # Connect signals
         self.manager.update_progress.connect(self.update_status)
         self.manager.update_app_being_processed.connect(
             lambda name: self.status_box.append(f"<b>Processing:</b> {name}")
         )
         self.manager.completed.connect(self.on_update_complete)
 
-        # Launch update process
         async_worker = AsyncWorker(self.manager.check_and_install, clean_updates)
         async_worker.signals.error.connect(self.show_error_message)
         self.threadpool.start(async_worker)
 
     def on_update_complete(self):
-        # self.cancel_btn.setEnabled(False)
+        self.apps_list = gui_functions.get_installed_apps()
+        self.updates_list = gui_functions.get_update_list(self.apps_list, self.exclusions_list)
 
-        # Refresh the app lists and GUI
-        self.refresh_app_lists()
-
-        # Clear and repopulate the "Available Updates" list widget
         updates_widget = self.view_widgets["updates"].findChild(QListWidget)
         updates_widget.clear()
         for app in self.updates_list:
-            updates_widget.addItem(app["name"])
+            item = QListWidgetItem(f"{app['name']} - {app['version']} -> {app['available']}")
+            item.setData(Qt.ItemDataRole.UserRole, app)
+            updates_widget.addItem(item)
         updates_widget.sortItems(Qt.SortOrder.AscendingOrder)
 
-        # Update buttons
         self.update_button_states()
 
     def update_status(self, progress, message):
