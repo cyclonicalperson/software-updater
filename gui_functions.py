@@ -11,7 +11,7 @@ EXCLUSIONS_DIR = os.path.join(os.getenv("LOCALAPPDATA"), "Software Updater")
 EXCLUSIONS_FILE = os.path.join(EXCLUSIONS_DIR, "exclusions.json")
 
 
-def _show_error(message: str):
+def show_error(message: str):
     """Display a critical error dialog and exit."""
     msg_box = QMessageBox()
     msg_box.setIcon(QMessageBox.Icon.Critical)
@@ -20,6 +20,16 @@ def _show_error(message: str):
     msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
     msg_box.exec()
     sys.exit()
+
+
+def show_warning(message: str):
+    """Display a warning dialog."""
+    msg_box = QMessageBox()
+    msg_box.setIcon(QMessageBox.Icon.Warning)
+    msg_box.setWindowTitle("Warning")
+    msg_box.setText(message)
+    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+    msg_box.exec()
 
 
 def check_winget():
@@ -34,9 +44,9 @@ def check_winget():
             stderr=subprocess.PIPE
         )
     except FileNotFoundError:
-        _show_error("Winget is not installed on this system.")
+        show_error("Winget is not installed on this system.")
     except subprocess.CalledProcessError:
-        _show_error("Winget is installed but returned an error.")
+        show_error("Winget is installed but returned an error.")
 
 
 def check_winget_module():
@@ -104,11 +114,11 @@ def check_winget_module():
     if "INSTALLED" in output or "INSTALLED_SUCCESS" in output:
         return
     elif "NEED_ADMIN" in output:
-        _show_error("Administrator privileges are required to install Microsoft.WinGet.Client.")
+        show_error("Administrator privileges are required to install Microsoft.WinGet.Client.")
     elif "FAILED" in output:
-        _show_error(f"Failed to install Microsoft.WinGet.Client:\n\n{output}")
+        show_error(f"Failed to install Microsoft.WinGet.Client:\n\n{output}")
     else:
-        _show_error(f"Unknown error occurred:\n\n{output}\n{result.stderr.strip()}")
+        show_error(f"Unknown error occurred:\n\n{output}\n{result.stderr.strip()}")
 
 
 def load_exclusions() -> list[dict]:
@@ -208,16 +218,6 @@ def get_update_list(apps_list, exclusions_list):
     return apps
 
 
-def get_unsupported_list(apps_list):
-    """Add apps to the unsupported apps list when the application is run."""
-    apps = []
-    for app in apps_list:
-        if app["source"] == "":
-            apps.append(app)
-
-    return apps
-
-
 def get_best_full_name(raw_name, full_names, used_names):
     raw_name = raw_name.strip()
 
@@ -238,4 +238,3 @@ def get_best_full_name(raw_name, full_names, used_names):
 
     # Fallback
     return raw_name
-

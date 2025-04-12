@@ -1,42 +1,39 @@
-# gui.spec
+# -*- mode: python ; coding: utf-8 -*-
 
-# Import necessary modules
-from PyInstaller.utils.hooks import collect_data_files
-import os
 
-# Analysis of your main script
 a = Analysis(
     ['gui.py'],
     pathex=[],
     binaries=[],
-    datas=[('gui_styles.qss', '.')],  # Adding the QSS file
+    datas=[('gui_styles.qss', '.')],
     hiddenimports=[],
     hookspath=[],
+    hooksconfig={},
     runtime_hooks=[],
-    excludes=[]
+    excludes=[],
+    noarchive=False,
+    optimize=0,
 )
+pyz = PYZ(a.pure)
 
-# Create the PYZ archive
-pyz = PYZ(a.pure, a.zipped_data)
-
-# Define the EXE with additional options
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
-    a.zipfiles,
     a.datas,
     [],
     name='Software Updater',
-    icon='icon.ico',
     debug=False,
+    bootloader_ignore_signals=False,
     strip=False,
-    upx=True,  # Enabling UPX compression
+    upx=True,
+    upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # Equivalent to --noconsole
-    uac_admin=False,  # Optional, for Windows if you need admin rights
-    onefile=True,  # Equivalent to --onefile
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon=['icon.ico'],
 )
-
-# Add UPX compression directory
-exe.upx_dir = "ups-5.0.0-win64"  # Path to UPX directory

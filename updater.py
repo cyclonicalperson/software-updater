@@ -4,23 +4,22 @@ import asyncio
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
-class UpdateManager(QObject,):
+class UpdateManager(QObject):
     update_progress = pyqtSignal(int, str)
     update_app_being_processed = pyqtSignal(str)
     completed = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, concurrent_limit):
         super().__init__()
         self.active = True
         self.lock = asyncio.Lock()  # Add a lock for shared variables
-        self.semaphore = asyncio.Semaphore(2)  # Limit to 2 concurrent updates
+        self.semaphore = asyncio.Semaphore(concurrent_limit)  # Limit number of concurrent updates
         self.completed_count = 0  # Initialize count of completed updates
         self.total_apps = 0  # Total number of apps to update
 
     async def check_and_install(self, app_list):
         """Main update process with progress tracking and concurrency control."""
         try:
-            print(f"[UpdateManager] Processing {len(app_list)} apps")
             self.total_apps = len(app_list)
             self.completed_count = 0  # Reset completed count
             logging.info(f"Total apps to update: {self.total_apps}")
@@ -35,7 +34,7 @@ class UpdateManager(QObject,):
 
             # Ensure completion signal is emitted when all tasks are done
             if self.completed_count >= self.total_apps:
-                self.update_progress.emit(100, "Update process completed.")
+                self.update_progress.emit(100, "<b>All updates completed!</b>")
                 self.completed.emit()
             else:
                 logging.warning(f"Completed {self.completed_count} out of {self.total_apps} updates.")

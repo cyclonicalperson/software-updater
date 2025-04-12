@@ -1,9 +1,8 @@
 import asyncio
 import os
 import sys
-import importlib.resources as pkg_resources
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar,
-                             QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox)
+                             QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QSpinBox, QListWidgetItem)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSignal, QObject, pyqtSlot, QThreadPool
 from PyQt6.QtGui import QIcon, QFont
 import gui_functions
@@ -47,11 +46,12 @@ class MainWindow(QMainWindow):
         self.exclusions_list = gui_functions.load_exclusions()
         self.apps_list = gui_functions.get_installed_apps()
         self.updates_list = gui_functions.get_update_list(self.apps_list, self.exclusions_list)
-        self.unsupported_apps_list = gui_functions.get_unsupported_list(self.apps_list)
 
         # Set up variables for QThread
         self.threadpool = QThreadPool()
-        self.manager = UpdateManager()
+        self.concurrent_update_number = 2  # How many apps update at once
+        self.warning_not_shown = True  # Check to only show the update number warning once
+        self.manager = None  # Placeholder for check_updates()
 
         # Stylize the UI
         self._init_ui()
@@ -82,7 +82,7 @@ class MainWindow(QMainWindow):
         self.nav_buttons = {}
 
         for i, (text, target_index) in enumerate({
-            "Available Updates": 0, "Skipped Updates": 1, "Installed Apps": 2, "Unsupported Apps": 3
+            "Available Updates": 0, "Skipped Updates": 1, "Installed Apps": 2
         }.items()):
             btn = QPushButton(text)
             btn.setProperty("navButton", True)
@@ -96,13 +96,11 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         self.view_widgets = {"updates": self.create_list_view("Apps to Update", self.updates_list),
                              "excluded": self.create_list_view("Skipped Updates", self.exclusions_list),
-                             "installed": self.create_list_view("Installed Apps", self.apps_list),
-                             "unsupported": self.create_list_view("Unsupported Apps", self.unsupported_apps_list)}
+                             "installed": self.create_list_view("Installed Apps", self.apps_list)}
 
         self.stack.addWidget(self.view_widgets["updates"])
         self.stack.addWidget(self.view_widgets["excluded"])
         self.stack.addWidget(self.view_widgets["installed"])
-        self.stack.addWidget(self.view_widgets["unsupported"])
 
         main_layout.addWidget(self.stack)
 
@@ -132,6 +130,20 @@ class MainWindow(QMainWindow):
 
         main_layout.addLayout(button_layout_bottom)
 
+        # Concurrency Control
+        concurrency_layout = QHBoxLayout()
+        concurrency_label = QLabel("Concurrent Updates:")
+        self.concurrent_spinbox = QSpinBox()
+        self.concurrent_spinbox.setMinimum(1)
+        self.concurrent_spinbox.setMaximum(10)
+        self.concurrent_spinbox.setValue(self.concurrent_update_number)
+        self.concurrent_spinbox.valueChanged.connect(self.handle_concurrency_change)
+
+        concurrency_layout.addWidget(concurrency_label)
+        concurrency_layout.addWidget(self.concurrent_spinbox)
+        concurrency_layout.addStretch()
+        main_layout.addLayout(concurrency_layout)
+
         # Progress bar and status
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
@@ -154,8 +166,6 @@ class MainWindow(QMainWindow):
             self.update_button_states)
         self.view_widgets["excluded"].findChild(QListWidget).selectionModel().selectionChanged.connect(
             self.update_button_states)
-        self.view_widgets["unsupported"].findChild(QListWidget).selectionModel().selectionChanged.connect(
-            self.update_button_states)
 
         # Set the first button as active
         self.switch_view(0, list(self.nav_buttons.values())[0])
@@ -170,7 +180,17 @@ class MainWindow(QMainWindow):
         list_widget = QListWidget()
         list_widget.setFont(QFont("Arial", 10))
         for app in data_list:
-            list_widget.addItem(app.get("name", "Unknown"))
+            name = app.get("name", "Unknown")
+            item = QListWidgetItem(name)
+
+            # Italicize if unsupported
+            if app.get("source", "") == "":
+                font = item.font()
+                font.setItalic(True)
+                item.setFont(font)
+
+            list_widget.addItem(item)
+
         layout.addWidget(list_widget)
         list_widget.sortItems(Qt.SortOrder.AscendingOrder)
         box.setLayout(layout)
@@ -302,26 +322,56 @@ class MainWindow(QMainWindow):
             self.status_box.append("<font color='red'>No valid apps to update.</font>")
             return
 
+        # Use the current spinbox value
+        self.concurrent_update_number = self.concurrent_spinbox.value()
+
+        # Create the update manager
+        self.manager = UpdateManager(concurrent_limit=self.concurrent_update_number)
+
         # Connect signals
         self.manager.update_progress.connect(self.update_status)
         self.manager.update_app_being_processed.connect(
-            lambda name: self.status_box.append(f"Processing: {name}")
+            lambda name: self.status_box.append(f"<b>Processing:</b> {name}")
         )
-        self.manager.completed.connect(lambda: self.status_box.append("All updates completed!"))
+        self.manager.completed.connect(self.on_update_complete)
 
         # Launch update process
         async_worker = AsyncWorker(self.manager.check_and_install, clean_updates)
         async_worker.signals.error.connect(self.show_error_message)
         self.threadpool.start(async_worker)
 
+    def on_update_complete(self):
+        # self.cancel_btn.setEnabled(False)
+
+        # Refresh the app lists and GUI
+        self.refresh_app_lists()
+
+        # Clear and repopulate the "Available Updates" list widget
+        updates_widget = self.view_widgets["updates"].findChild(QListWidget)
+        updates_widget.clear()
+        for app in self.updates_list:
+            updates_widget.addItem(app["name"])
+        updates_widget.sortItems(Qt.SortOrder.AscendingOrder)
+
+        # Update buttons
+        self.update_button_states()
+
     def update_status(self, progress, message):
         self.progress_bar.setValue(progress)
         if "Successfully updated" in message:
             self.status_box.append(f"<font color='green'>{message}</font>")
+        elif "No available update" in message:
+            self.status_box.append(f"<font color='yellow'>{message}</font>")
         elif "Could not be updated" in message:
             self.status_box.append(f"<font color='red'>{message}</font>")
         else:
             self.status_box.append(message)
+
+    def handle_concurrency_change(self, value):
+        self.concurrent_update_number = value
+        if value >= 5 and self.warning_not_shown:
+            gui_functions.show_warning("Running more than 5 concurrent updates may slow down your system.")
+            self.warning_not_shown = False
 
     def show_error_message(self, message):
         """Prints an error message in the status text box."""

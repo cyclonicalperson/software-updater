@@ -60,6 +60,14 @@ QTextEdit {
     padding: 5px;
 }
 
+QLabel {
+    background-color: #202020;
+    color: #f8f8f2;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 5px;
+}
+
 QProgressBar {
     height: 20px;
     text-align: center;
