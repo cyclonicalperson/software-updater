@@ -89,6 +89,7 @@ class UpdateManager(QObject):
         return updated
 
     async def run_winget_update_option(self, app, option):
+        """Runs the winget update command and parses it's output."""
         try:
             name_or_id = app.get("name" if option == "--name" else "id")
             if not name_or_id:

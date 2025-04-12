@@ -23,7 +23,6 @@ class AsyncWorker(QRunnable):
 
     @pyqtSlot()
     def run(self):
-        print("[AsyncWorker] Starting event loop")
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -58,6 +57,7 @@ class MainWindow(QMainWindow):
         self.load_styles()
 
     def load_styles(self):
+        """Loads the app's CSS from gui_styles.qss."""
         try:
             if getattr(sys, 'frozen', False):
                 # Running as compiled .exe
@@ -74,6 +74,7 @@ class MainWindow(QMainWindow):
             print(f"[Style Load Error] {e}")
 
     def _init_ui(self):
+        """Initializes all the GUI elements."""
         central_widget = QWidget()
         main_layout = QVBoxLayout()
 
@@ -142,11 +143,12 @@ class MainWindow(QMainWindow):
         concurrency_layout.addStretch()
         main_layout.addLayout(concurrency_layout)
 
-        # Progress bar and status
+        # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
         main_layout.addWidget(self.progress_bar)
 
+        # Status box
         self.status_box = QTextEdit()
         self.status_box.setReadOnly(True)
         self.status_box.setFont(QFont("Arial", 10))
@@ -155,7 +157,7 @@ class MainWindow(QMainWindow):
 
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
-        self.stack.setCurrentIndex(0)
+        self.stack.setCurrentIndex(0)  # QStackWidget starts on first list
 
         # Connect selection change signals to update the button states
         self.view_widgets["installed"].findChild(QListWidget).selectionModel().selectionChanged.connect(
@@ -172,6 +174,7 @@ class MainWindow(QMainWindow):
         self.update_button_states()
 
     def create_list_view(self, title, data_list):
+        """Creates the lists for the QStackWidget."""
         box = QGroupBox(title)
         layout = QVBoxLayout()
         list_widget = QListWidget()
@@ -269,6 +272,7 @@ class MainWindow(QMainWindow):
         self.selected_btn.setEnabled(has_checked)
 
     def exclude_app(self):
+        """Moves an app from the installed apps/available updates lists to the excluded apps list."""
         selected_item = self.get_selected_item(self.stack.currentIndex())[0]
 
         if selected_item:
@@ -298,6 +302,7 @@ class MainWindow(QMainWindow):
                 self.update_button_states()
 
     def include_app(self):
+        """Moves an app from the excluded apps list back to the installed apps/available updates lists."""
         exclusions_widget = self.view_widgets["excluded"].findChild(QListWidget)
         selected_item = exclusions_widget.selectedItems()[0] if exclusions_widget.selectedItems() else None
 
@@ -324,6 +329,7 @@ class MainWindow(QMainWindow):
             self.update_button_states()
 
     def start_update(self, apps_to_update):
+        """Starts the update process for the given app list."""
         self.status_box.clear()
         self.progress_bar.setValue(0)
 
@@ -345,6 +351,7 @@ class MainWindow(QMainWindow):
         self.threadpool.start(async_worker)
 
     def on_update_complete(self):
+        """Fetches the new app and update lists after the update process is completed, and refreshes them in the GUI."""
         self.updates_list = gui_functions.get_update_list(self.apps_list, self.exclusions_list)
 
         updates_widget = self.view_widgets["updates"].findChild(QListWidget)
@@ -373,6 +380,7 @@ class MainWindow(QMainWindow):
         self.update_button_states()
 
     def update_selected_apps(self):
+        """Updates all apps marked with the checkmark box."""
         list_widget = self.view_widgets["updates"].findChild(QListWidget)
         selected_apps = []
 
@@ -386,6 +394,7 @@ class MainWindow(QMainWindow):
         self.start_update(apps_to_update=selected_apps)
 
     def update_status(self, progress, message):
+        """Prints the update status of apps in the update process to the status box."""
         self.progress_bar.setValue(progress)
         if "Successfully updated" in message:
             self.status_box.append(f"<font color='green'>{message}</font>")
@@ -397,6 +406,7 @@ class MainWindow(QMainWindow):
             self.status_box.append(message)
 
     def handle_concurrency_change(self, value):
+        """Tracks the number of concurrent updates and shows a warning for large values."""
         self.concurrent_update_number = value
         if value >= 5 and self.warning_not_shown:
             gui_functions.show_warning("Running more than 5 concurrent updates may slow down your system.")

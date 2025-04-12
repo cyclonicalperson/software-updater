@@ -33,7 +33,7 @@ def show_warning(message: str):
 
 
 def check_winget():
-    """Check whether a properly installed winget is present."""
+    """Checks whether a properly installed winget is present."""
     try:
         subprocess.run(
             ["winget", "--version"],
@@ -50,7 +50,7 @@ def check_winget():
 
 
 def check_winget_module():
-    """Check whether Microsoft.WinGet.Client module is installed. Attempt installation if missing."""
+    """Checks whether Microsoft.WinGet.Client module is installed. Attempts installation if missing."""
 
     ps_script = r'''
     $ErrorActionPreference = 'Stop'
@@ -122,7 +122,7 @@ def check_winget_module():
 
 
 def load_exclusions() -> list[dict]:
-    """Load exclusions from the exclusions.json file in AppData."""
+    """Loads exclusions from the exclusions.json file in AppData."""
     try:
         with open(EXCLUSIONS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -131,13 +131,13 @@ def load_exclusions() -> list[dict]:
 
 
 def save_exclusions(exclusions: list[dict]):
-    """Save exclusions to the exclusions.json file in AppData."""
+    """Saves exclusions to the exclusions.json file in AppData."""
     with open(EXCLUSIONS_FILE, "w", encoding="utf-8") as f:
         json.dump(exclusions, f, indent=4)
 
 
 def get_installed_apps():
-    """Get a list of installed applications using winget and parse the output correctly."""
+    """Gets a list of installed applications using winget and parses the output."""
     try:
         # Get the full app names using PowerShell command
         names_result = subprocess.run(
@@ -219,6 +219,7 @@ def get_update_list(apps_list, exclusions_list):
 
 
 def get_best_full_name(raw_name, full_names, used_names):
+    """Tries matching the best full name possible from a cut-off name."""
     raw_name = raw_name.strip()
 
     # Tier 1: Exact match
