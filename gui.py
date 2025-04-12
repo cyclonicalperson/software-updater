@@ -166,16 +166,29 @@ class MainWindow(QMainWindow):
         self.update_button_states()
 
     def create_list_view(self, title, data_list):
-        """Creates the lists for the QStackBox widget."""
+        """Creates the lists for the QStackedWidget widget with app names and versions."""
         box = QGroupBox(title)
         layout = QVBoxLayout()
         list_widget = QListWidget()
         list_widget.setFont(QFont("Arial", 10))
-        for app in data_list:
-            name = app.get("name", "Unknown")
-            item = QListWidgetItem(name)
 
-            # Italicize if unsupported
+        for app in data_list:
+            name = app.get("name", "Unknown")  # Name of the app
+            version = app.get("version", "Unknown")  # Current version of the app
+            available_version = app.get("available", "Unknown")  # Version the app will update to
+
+            # For the "Available Updates" list, display both the current version and the available update version
+            if title == "Apps to Update":
+                item = QListWidgetItem(
+                    f"{name} - {version} -> {available_version}")  # current version -> update version
+            elif title == "Installed Apps":
+                # For the "Installed Apps" list, display the current version
+                item = QListWidgetItem(f"{name} - {version}")
+            else:
+                # For the Excluded Apps list, just display the name
+                item = QListWidgetItem(name)
+
+            # Italicize names if unsupported (based on the 'source' being empty)
             if app.get("source", "") == "":
                 font = item.font()
                 font.setItalic(True)
