@@ -121,7 +121,7 @@ class MainWindow(QMainWindow):
         spinbox_wrapper = QWidget()
         spinbox_wrapper.setObjectName("SpinboxWrapper")
         spinbox_layout = QHBoxLayout()
-        spinbox_layout.setContentsMargins(0, 0, 0, 0)
+        spinbox_layout.setContentsMargins(0, 0, 2, 0)  # A bit of padding on the right of the QSpinBox
 
         self.concurrency_label = QLabel("Number of Apps Updated At Once:")
         self.concurrency_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
