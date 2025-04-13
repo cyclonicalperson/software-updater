@@ -16,6 +16,7 @@ class UpdateManager(QObject):
         self.semaphore = asyncio.Semaphore(concurrent_limit)  # Limit number of concurrent updates
         self.completed_count = 0  # Initialize count of completed updates
         self.total_apps = 0  # Total number of apps to update
+        self.stop_requested = False  # Track whether stopping updates was requested
 
     async def check_and_install(self, app_list):
         """Main update process with progress tracking and concurrency control."""
@@ -24,13 +25,22 @@ class UpdateManager(QObject):
             self.completed_count = 0  # Reset completed count
             logging.info(f"Total apps to update: {self.total_apps}")
 
-            tasks = [
-                self.run_with_semaphore(self.process_app_and_update_status, app)
-                for app in app_list
-            ]
+            tasks = []
 
-            # Run all tasks concurrently but limited by the semaphore
-            await asyncio.gather(*tasks)
+            for app in app_list:
+                if self.stop_requested:
+                    logging.info("Update process stopped by user.")
+                    self.update_progress.emit(int((self.completed_count / self.total_apps) * 100),
+                                              "<font color='orange'>Update process was stopped.</font>")
+                    self.completed.emit()
+                    return
+
+                # Don't create the coroutine unless you're definitely using it
+                task = self.run_with_semaphore(self.process_app_and_update_status, app)
+                tasks.append(task)
+
+            if not self.stop_requested:
+                await asyncio.gather(*tasks)
 
             # Ensure completion signal is emitted when all tasks are done
             if self.completed_count >= self.total_apps:
@@ -53,6 +63,9 @@ class UpdateManager(QObject):
 
     async def process_app_and_update_status(self, app):
         """Process an app and update the progress."""
+        if self.stop_requested:
+            return
+
         try:
             self.update_app_being_processed.emit(app['name'])
             update_status = await self.process_app(app)
@@ -80,7 +93,8 @@ class UpdateManager(QObject):
         """Use winget to update apps."""
         updated = False  # Track if update was successful
         for option in ['--id', '--name']:
-            if not self.active:
+            if self.stop_requested:
+                logging.info(f"Update stopped during app {app.get('name', 'Unknown')}")
                 return False
 
             if await self.run_winget_update_option(app, option):

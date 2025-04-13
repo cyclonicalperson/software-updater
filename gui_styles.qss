@@ -60,12 +60,21 @@ QTextEdit {
     padding: 5px;
 }
 
-QLabel {
-    background-color: #202020;
-    color: #f8f8f2;
-    border: 1px solid #333;
+QSpinBox {
+    background-color: #232323;
+    color: #ffffff;
+    border: 1px solid #555;
     border-radius: 4px;
-    padding: 5px;
+    padding: 4px;
+}
+
+QLabel {
+    background-color: #00ADB5;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: bold;
 }
 
 QProgressBar {

@@ -2,7 +2,8 @@ import asyncio
 import os
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar,
-                             QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QSpinBox, QListWidgetItem)
+                             QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QSpinBox, QListWidgetItem,
+                             QSizePolicy)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSignal, QObject, pyqtSlot, QThreadPool
 from PyQt6.QtGui import QIcon, QFont
 import gui_functions
@@ -105,43 +106,62 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(self.stack)
 
-        # Include/Exclude button
-        button_layout_top = QHBoxLayout()
-        self.toggle_btn = QPushButton("Skip Updates for Selected App")  # Default text
+        # === Row 1 ===
+        button_row1 = QHBoxLayout()
+
+        self.toggle_btn = QPushButton("Skip Updates for Selected App")
         self.toggle_btn.setEnabled(False)
         self.toggle_btn.clicked.connect(self.update_button_states)
 
-        button_layout_top.addWidget(self.toggle_btn)
-        main_layout.addLayout(button_layout_top)
+        # Make it expandable
+        self.toggle_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
-        # Update All Apps button
-        button_layout_bottom = QHBoxLayout()
-        self.start_btn = QPushButton("Update All Apps")
-        self.start_btn.setMaximumWidth(int(self.width() * 0.55))  # The button will be 55% of the screen size
-        self.start_btn.clicked.connect(lambda: self.start_update(self.updates_list))
+        button_row1.addWidget(self.toggle_btn)
 
-        # Update Selected Apps button
-        self.selected_btn = QPushButton("Update Selected Apps")
-        self.selected_btn.setEnabled(False)
-        self.selected_btn.clicked.connect(self.update_selected_apps)
+        spinbox_wrapper = QWidget()
+        spinbox_layout = QHBoxLayout()
+        spinbox_layout.setContentsMargins(0, 0, 0, 0)
 
-        button_layout_bottom.addWidget(self.start_btn)
-        button_layout_bottom.addWidget(self.selected_btn)
-        main_layout.addLayout(button_layout_bottom)
+        self.concurrency_label = QLabel("Number of Apps Updated At Once:")
+        self.concurrency_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
-        # Concurrency Control
-        concurrency_layout = QHBoxLayout()
-        concurrency_label = QLabel("Concurrent Updates:")
         self.concurrent_spinbox = QSpinBox()
         self.concurrent_spinbox.setMinimum(1)
         self.concurrent_spinbox.setMaximum(10)
         self.concurrent_spinbox.setValue(self.concurrent_update_number)
+        self.concurrent_spinbox.setFixedWidth(40)
         self.concurrent_spinbox.valueChanged.connect(self.handle_concurrency_change)
 
-        concurrency_layout.addWidget(concurrency_label)
-        concurrency_layout.addWidget(self.concurrent_spinbox)
-        concurrency_layout.addStretch()
-        main_layout.addLayout(concurrency_layout)
+        spinbox_layout.addWidget(self.concurrency_label)
+        spinbox_layout.addWidget(self.concurrent_spinbox)
+        spinbox_wrapper.setLayout(spinbox_layout)
+
+        # Make it expandable
+        spinbox_wrapper.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        self.spinbox_wrapper = spinbox_wrapper  # Temp variable
+        button_row1.addWidget(self.spinbox_wrapper)
+
+        main_layout.addLayout(button_row1)
+
+        # === Row 2 ===
+        button_row2 = QHBoxLayout()
+
+        self.selected_btn = QPushButton("Update Selected Apps")
+        self.selected_btn.setEnabled(False)
+        self.selected_btn.clicked.connect(self.update_selected_apps)
+        button_row2.addWidget(self.selected_btn)
+
+        self.start_btn = QPushButton("Update All Apps")
+        self.start_btn.clicked.connect(lambda: self.start_update(self.updates_list))
+        button_row2.addWidget(self.start_btn)
+
+        self.stop_btn = QPushButton("Stop Update Process")
+        self.stop_btn.setEnabled(False)
+        self.stop_btn.clicked.connect(self.stop_updates)
+        button_row2.addWidget(self.stop_btn)
+
+        main_layout.addLayout(button_row2)
 
         # Progress bar
         self.progress_bar = QProgressBar()
@@ -333,6 +353,11 @@ class MainWindow(QMainWindow):
         self.status_box.clear()
         self.progress_bar.setValue(0)
 
+        # Disable both update buttons, enable stop
+        self.start_btn.setEnabled(False)
+        self.selected_btn.setEnabled(False)
+        self.stop_btn.setEnabled(True)
+
         clean_updates = [app for app in apps_to_update if isinstance(app, dict) and "name" in app and "id" in app]
         if not clean_updates:
             self.status_box.append("<font color='red'>No valid apps to update.</font>")
@@ -340,6 +365,7 @@ class MainWindow(QMainWindow):
 
         self.concurrent_update_number = self.concurrent_spinbox.value()
         self.manager = UpdateManager(concurrent_limit=self.concurrent_update_number)
+        self.manager.stop_requested = False
         self.manager.update_progress.connect(self.update_status)
         self.manager.update_app_being_processed.connect(
             lambda name: self.status_box.append(f"<b>Processing:</b> {name}")
@@ -377,6 +403,7 @@ class MainWindow(QMainWindow):
 
         updates_widget.sortItems(Qt.SortOrder.AscendingOrder)
         updates_widget.blockSignals(False)
+        self.stop_btn.setEnabled(False)
         self.update_button_states()
 
     def update_selected_apps(self):
@@ -392,6 +419,12 @@ class MainWindow(QMainWindow):
                     selected_apps.append(app)
 
         self.start_update(apps_to_update=selected_apps)
+
+    def stop_updates(self):
+        """Stops the ongoing update process."""
+        if self.manager:
+            self.manager.stop_requested = True
+            self.status_box.append("<font color='orange'>Update process has been requested to stop...</font>")
 
     def update_status(self, progress, message):
         """Prints the update status of apps in the update process to the status box."""

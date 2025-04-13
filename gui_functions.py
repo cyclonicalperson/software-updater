@@ -176,6 +176,8 @@ def get_installed_apps():
                     continue  # Skip malformed lines
 
                 winget_name = parts[0]
+                if winget_name == "Name":  # Since the name column can still sneak through, hardcoded it out
+                    pass
                 app_id = parts[1]
                 version = parts[2] if parts[2] != '' else 'Unknown'
                 available = ''
