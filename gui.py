@@ -119,6 +119,7 @@ class MainWindow(QMainWindow):
         button_row1.addWidget(self.toggle_btn)
 
         spinbox_wrapper = QWidget()
+        spinbox_wrapper.setObjectName("SpinboxWrapper")
         spinbox_layout = QHBoxLayout()
         spinbox_layout.setContentsMargins(0, 0, 0, 0)
 

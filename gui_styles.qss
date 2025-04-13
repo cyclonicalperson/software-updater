@@ -60,21 +60,28 @@ QTextEdit {
     padding: 5px;
 }
 
-QSpinBox {
-    background-color: #232323;
-    color: #ffffff;
-    border: 1px solid #555;
-    border-radius: 4px;
-    padding: 4px;
-}
-
-QLabel {
+#SpinboxWrapper {
     background-color: #00ADB5;
     color: #fff;
     border: none;
     padding: 8px 16px;
     border-radius: 6px;
     font-weight: bold;
+}
+#SpinboxWrapper QLabel {
+    background-color: #00ADB5;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+#SpinboxWrapper QSpinBox {
+    background-color: #232323;
+    color: #ffffff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 4px;
 }
 
 QProgressBar {
