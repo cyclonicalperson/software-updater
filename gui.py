@@ -202,9 +202,13 @@ class MainWindow(QMainWindow):
         list_widget.setFont(QFont("Arial", 10))
 
         for app in data_list:
-            name = app.get("name", "Unknown")
-            version = app.get("version", "Unknown")
-            available_version = app.get("available", "Unknown")
+            if isinstance(app, dict):  # Ensure app is a dictionary
+                name = app.get("name", "Unknown")
+                version = app.get("version", "Unknown")
+                available_version = app.get("available", "Unknown")
+            else:
+                # Handle the case where `app` is not a dictionary
+                name = version = available_version = "Invalid data"
 
             if title == "Apps to Update":
                 text = f"{name} - {version} -> {available_version}"

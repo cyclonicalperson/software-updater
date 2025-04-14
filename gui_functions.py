@@ -33,20 +33,73 @@ def show_warning(message: str):
 
 
 def check_winget():
-    """Checks whether a properly installed winget is present."""
+    """Checks whether winget is installed. Installs it if missing."""
     try:
         subprocess.run(
             ["winget", "--version"],
             check=True,
             shell=False,
-            creationflags=subprocess.CREATE_NO_WINDOW,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
     except FileNotFoundError:
-        show_error("Winget is not installed on this system.")
+        install_winget_cli()
     except subprocess.CalledProcessError:
         show_error("Winget is installed but returned an error.")
+
+
+def install_winget_cli():
+    """Attempts to install winget via App Installer or GitHub fallback."""
+
+    powershell_script = r'''
+    $ErrorActionPreference = 'Stop'
+    $ProgressPreference = 'SilentlyContinue'
+
+    $wingetStoreUrl = "https://aka.ms/getwinget"
+
+    try {
+        Write-Output "Attempting winget install from Microsoft Store..."
+        Add-AppxPackage -Path $wingetStoreUrl -ErrorAction Stop
+        Write-Output "Winget install via Store succeeded."
+        exit 0
+    } catch {
+        Write-Output "Store method failed, trying GitHub method..."
+    }
+
+    $temp = [System.IO.Path]::GetTempPath()
+    $wingetUrl = "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+    $vclibsUrl = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
+
+    $wingetPath = Join-Path $temp "winget.msixbundle"
+    $vclibsPath = Join-Path $temp "vclibs.appx"
+
+    Invoke-WebRequest -Uri $wingetUrl -OutFile $wingetPath -UseBasicParsing
+    Invoke-WebRequest -Uri $vclibsUrl -OutFile $vclibsPath -UseBasicParsing
+
+    Add-AppxPackage -Path $vclibsPath
+    Add-AppxPackage -Path $wingetPath
+
+    Write-Output "Winget installed from GitHub."
+    exit 0
+    '''
+
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", powershell_script],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        shell=False,
+        creationflags=subprocess.CREATE_NO_WINDOW
+    )
+
+    if "installed" not in result.stdout.lower() or result.returncode != 0:
+        show_error(f"Failed to install winget:\n\n{result.stdout.strip()}\n{result.stderr.strip()}")
+    else:
+        try:
+            subprocess.run(["winget", "--version"], check=True)
+        except Exception:
+            show_error("Winget installation completed, but still not accessible.")
 
 
 def check_winget_module():
@@ -106,7 +159,7 @@ def check_winget_module():
         stderr=subprocess.PIPE,
         text=True,
         shell=False,
-        creationflags=subprocess.CREATE_NO_WINDOW
+        creationflags=subprocess.CREATE_NO_WINDOW,
     )
 
     output = result.stdout.strip()
@@ -142,13 +195,21 @@ def get_installed_apps():
         # Get the full app names using PowerShell command
         names_result = subprocess.run(
             ["powershell", "-Command", "Get-WinGetPackage | Select Name"],
-            capture_output=True, text=True, check=True
+            capture_output=True,
+            text=True,
+            check=True,
+            shell=False,
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
 
         # Get the name, id, version, availability, and source from WinGet using PowerShell command
         winget_result = subprocess.run(
             ["winget", "list", "--accept-source-agreements"],
-            capture_output=True, text=True, check=True
+            capture_output=True,
+            text=True,
+            check=True,
+            shell=False,
+            creationflags=subprocess.CREATE_NO_WINDOW
         )
 
         # Parse clean full names
