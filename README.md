@@ -2,7 +2,7 @@
 
 An Windows application for the automated updating of apps installed on the system.<br>
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/f21ce4f7-4598-4eec-9fca-67d38fb22f72" />
+  <img src="https://github.com/user-attachments/assets/2207099e-2d0b-4ff0-8bb7-f551b1c5d1c4">
 </p>
 
 ## Requirements
@@ -18,7 +18,18 @@ An Windows application for the automated updating of apps installed on the syste
 
 ## Usage
 
-TBD - explain app functions
+### App Lists
+The **Available Updates** list shows all apps with updates that may be installed.<br><br>
+The **Skipped Updates** list shows all apps which will not be checked for updates and ignored. <br>Apps may be added to this list from any of the other two lists.<br><br>
+The **Installed Apps** list shows all apps detected on the system. <br>Apps in <i>italic</i> are not supported for automatic updates.<br><br><br>
+
+### Buttons
+Apps may be updated in two ways:
+ - All at once with the **Update All Apps** button, or
+ - Only the checkmarked apps with the **Update Selected Apps** button.<br>
+
+The **Number of Apps Updated at Once** box shows how many update processes will run at once. <br>Running many processes may slow down the entire system (since the app will utilize up to 100% of the CPU).<br><br>
+The update process may be stopped at any time with the **Stop Update Process** button, only the currently running updates will finish updating.
 
 ## FAQ
 **- Can the application update all apps?<br>**
@@ -26,8 +37,8 @@ No, only apps present in winget (Windows Package Manager) can be updated.<br>
 This does not include more uncommon apps.<br><br>
 
 **- How does the exclusion list work?<br>**
-Any app in the installed apps or update list can be selected and excluded by clicking the 'Exclude Selected' button.<br>
-Apps can be returned back to the installed apps list by selecting an app in the exclusion list and pressing the 'Include Selected' button.<br>
+Any app in the Installed Apps or Available Updates list can be selected and excluded by pressing the 'Skip Updates' button.<br>
+Apps can be returned back to the installed apps list by selecting an app in the exclusion list and pressing the 'Restore Updates' button.<br>
 Any apps in the exclusion list will have their updates skipped.
 
 ## Installation (for development)
