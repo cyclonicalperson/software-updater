@@ -255,6 +255,13 @@ def get_installed_apps():
                         source = parts[3]
 
                 resolved_name = get_best_full_name(winget_name, full_names, used_names)
+
+                # In case of the ID being malformed, show app in app list but remove all data
+                if not app_id or not re.match(r"^[\w\.\-\+]+$", app_id):
+                    source = ""
+                    available = ""
+                    version = "Unknown"
+
                 used_names.add(resolved_name)
 
                 apps.append({
