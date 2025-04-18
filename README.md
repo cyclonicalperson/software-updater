@@ -1,8 +1,8 @@
 # Software Updater
 
-An Windows application for the automated updating of apps installed on the system.<br>
+An Windows application for automatic updating of apps installed on the system.<br>
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/2207099e-2d0b-4ff0-8bb7-f551b1c5d1c4">
+  <img src="https://github.com/user-attachments/assets/8e3f10d5-fb38-4cbf-b14c-9be9537419d0">
 </p>
 
 ## Requirements
@@ -37,8 +37,8 @@ No, only apps present in winget (Windows Package Manager) can be updated.<br>
 This does not include more uncommon apps.<br><br>
 
 **- How does the exclusion list work?<br>**
-Any app in the Installed Apps or Available Updates list can be selected and excluded by pressing the 'Skip Updates' button.<br>
-Apps can be returned back to the installed apps list by selecting an app in the exclusion list and pressing the 'Restore Updates' button.<br>
+Any app in the **Installed Apps** or **Available Updates** list can be selected and excluded by pressing the '**Skip Updates**' button.
+Apps can be returned back to the installed apps list by selecting an app in the exclusion list and pressing the '**Restore Updates**' button.<br>
 Any apps in the exclusion list will have their updates skipped.
 
 ## Installation (for development)
@@ -56,20 +56,16 @@ Any apps in the exclusion list will have their updates skipped.
     pip install -r requirements.txt
     ```
 
-3. Build the executable (optional):
-
-    ```bash
-    pyinstaller software_installer.spec
-    ```
-
 ## Directory Structure
 
 ```
 software-updater/
 ├── gui.py                    # Main GUI application
+├── frameless_window.py       # GUI component for replacing the default Windows window
+├── gui_styles.qss            # CSS for the GUI
 ├── gui_functions.py          # Logic for the GUI
-├── updater.py                # Logic to automatically update applications
-├── software_installer.spec   # .spec file for compiling the app with PyInstaller
+├── updater.py                # Logic for automatically updating applications
+├── icon.ico                  # App icon
 └── requirements.txt          # Python dependencies
 ```
 
