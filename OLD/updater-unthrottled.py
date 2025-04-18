@@ -4,7 +4,7 @@ import os
 import subprocess
 import asyncio
 from PyQt6.QtCore import QObject, pyqtSignal
-from app_endpoints import get_latest_version
+from OLD.app_endpoints import get_latest_version
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
