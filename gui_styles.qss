@@ -25,7 +25,7 @@ QListWidget {
     padding: 5px;
 }
 
-QListWidget::item:selected {
+QListWidget::item-selected {
     background-color: #444;
     color: #f0f0f0;
 }
@@ -84,20 +84,20 @@ QTextEdit {
     border: 1px solid #555;
     border-radius: 4px;
     padding: 4px;
-    padding-right: 0px; /* No space for arrow */
+    padding-right: 0px;
 }
 
 #ComboBoxWrapper QComboBox::drop-down {
     subcontrol-origin: padding;
     subcontrol-position: top right;
-    width: 0px; /* No space for arrow */
+    width: 0px;
     border-left: none;
 }
 
 #ComboBoxWrapper QComboBox::down-arrow {
     width: 0;
     height: 0;
-    display: none; /* Hide the arrow */
+    display: none;
 }
 
 QProgressBar {
@@ -119,6 +119,7 @@ QStatusBar {
     background-color: #1a1a1a;
     color: #888;
     border-top: 1px solid #333;
+    margin-bottom: 0px;  /* Remove extra space below the status bar */
 }
 
 [navButton="true"] {
@@ -172,4 +173,62 @@ QScrollBar::add-line:horizontal,
 QScrollBar::sub-line:horizontal {
     background: none;
     width: 0px;
+}
+
+
+/* FRAMELESS WINDOW */
+
+#MainWindow {
+    background-color: #121212;
+    color: white;
+    border-radius: 6px;
+}
+
+#TitleBar {
+    background-color: #121212;
+    color: white;
+    border-bottom: 1px solid #333; /* Line separating title bar from the rest of the GUI */
+}
+
+#Title {
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+}
+
+#TitleBar QPushButton {
+    background: transparent;
+    color: white;
+    border: none;
+    padding: 5px;
+    font-size: 14px;
+}
+
+#TitleBar QPushButton:hover {
+    background-color: #444;
+}
+
+#ContentArea {
+    background-color: #121212;
+    border-radius: 6px;
+}
+
+#TitleBar QPushButton {
+    background-color: #1e1e1e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
+    padding: 0px;
+}
+
+#TitleBar QPushButton:hover {
+    background-color: #00ADB5;
+    color: #fff;
+}
+
+#TitleBar QPushButton:pressed {
+    background-color: #02889b;
 }

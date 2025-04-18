@@ -35,7 +35,7 @@ class AsyncWorker(QRunnable):
             self.signals.finished.emit()
 
 
-class MainWindow(QMainWindow):
+class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Software Updater")
@@ -176,7 +176,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.status_box)
 
         central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
+        self.setLayout(main_layout)
         self.stack.setCurrentIndex(0)  # QStackWidget starts on first list
 
         # Connect selection change signals to update the button states
@@ -480,6 +480,13 @@ if __name__ == "__main__":
     application = QApplication(sys.argv)
     gui_functions.check_winget()
     gui_functions.check_winget_module()
-    window = MainWindow()
+
+    main_widget = MainWindow()
+    from frameless_window import FramelessWindow
+    window = FramelessWindow(main_widget)
+
+    window.setWindowIcon(QIcon("icon.ico"))
+    window.resize(600, 565)
     window.show()
+
     sys.exit(application.exec())
