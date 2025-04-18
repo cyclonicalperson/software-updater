@@ -3,7 +3,7 @@ import os
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar,
                              QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QListWidgetItem, QSizePolicy,
-                             QComboBox)
+                             QComboBox, QMessageBox)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSignal, QObject, pyqtSlot, QThreadPool
 from PyQt6.QtGui import QIcon, QFont
 import gui_functions
@@ -456,6 +456,24 @@ class MainWindow(QMainWindow):
     def show_error_message(self, message):
         """Prints an error message in the status text box."""
         self.status_box.append(f"<font color='red'>Error: {message}</font>")
+
+    def closeEvent(self, event):
+        """Called when the window is closing. Confirms and stops updates before exit."""
+        if self.manager and not self.manager.stop_requested:
+            reply = QMessageBox.question(
+                self,
+                "Confirm Exit",
+                "Updates are still running. Are you sure you want to exit?\n The currently running updates will still finish.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self.stop_updates()
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            self.stop_updates()
+            event.accept()
 
 
 if __name__ == "__main__":
