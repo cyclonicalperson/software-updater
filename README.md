@@ -1,6 +1,7 @@
 # Software Updater
 
-An Windows application for automatic updating of apps installed on the system.<br>
+A GUI-based software updater for Windows 10/11, built with Python and PyQt6.<br>
+Designed to streamline the process of checking for, downloading, and installing updates for various applications.<br>
 <p align="center">
   <img src="https://github.com/user-attachments/assets/8e3f10d5-fb38-4cbf-b14c-9be9537419d0">
 </p>
@@ -11,17 +12,21 @@ An Windows application for automatic updating of apps installed on the system.<b
 
 ## Features
 
-- Scans installed applications on the system
-- Updates applications with the click of a button
-- Lightweight and fast
-- Packaged as a standalone portable `.exe`
+- **Frameless Custom UI**: Modern interface with draggable title bar and custom window controls.
+- **Update Management**: Check for updates, download, and install them seamlessly.
+- **Selective Updates**: Choose specific applications to update.
+- **Skip Updates**: Option to skip updates for selected applications.
+- **Process Control**: Ability to stop ongoing update processes.
 
 ## Usage
+
+The app should be **ran as administrator** on first boot to install neccesary dependencies.<br>
+It also won't show UAC prompts, requesting administrator access to update apps.<br>
 
 ### App Lists
 The **Available Updates** list shows all apps with updates that may be installed.<br><br>
 The **Skipped Updates** list shows all apps which will not be checked for updates and ignored. <br>Apps may be added to this list from any of the other two lists.<br><br>
-The **Installed Apps** list shows all apps detected on the system. <br>Apps in <i>italic</i> are not supported for automatic updates.<br><br><br>
+The **Installed Apps** list shows all apps detected on the system. <br>Apps in <i>italic</i> are not supported for automatic updates.<br><br>
 
 ### Buttons
 Apps may be updated in two ways:
@@ -50,11 +55,22 @@ Any apps in the exclusion list will have their updates skipped.
     cd software-updater
     ```
 
-2. Install dependencies:
+2. Create a Virtual Environment (optional but recommended):
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
 
     ```bash
     pip install -r requirements.txt
     ```
+
+Run the application using:
+  ```bash
+  python main.py
+  ```
 
 ## Directory Structure
 
