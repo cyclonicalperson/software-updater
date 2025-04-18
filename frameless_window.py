@@ -3,12 +3,10 @@ import sys
 
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import (
-    QWidget, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QFrame, QSizeGrip
-)
+from PyQt6.QtWidgets import QMainWindow, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QFrame, QWidget
 
 
-class FramelessWindow(QWidget):
+class FramelessWindow(QMainWindow):
     def __init__(self, content_widget: QWidget):
         super().__init__()
         self.title_bar = None  # For navbar dragging
@@ -54,17 +52,14 @@ class FramelessWindow(QWidget):
 
         # Minimize button
         self.btn_minimize = QPushButton("–")
-        self.btn_minimize.setFixedSize(24, 24)
         self.btn_minimize.clicked.connect(self.showMinimized)
 
         # Maximize button
         self.btn_maximize = QPushButton("⛶")
-        self.btn_minimize.setFixedSize(24, 24)
         self.btn_maximize.clicked.connect(self.toggle_maximize_restore)
 
         # Close button
         self.btn_close = QPushButton("✕")
-        self.btn_minimize.setFixedSize(24, 24)
         self.btn_close.clicked.connect(self.close)
 
         # Title layout setup
@@ -83,7 +78,9 @@ class FramelessWindow(QWidget):
         content_widget.setObjectName("ContentArea")
         main_layout.addWidget(content_widget)
 
-        self.setLayout(main_layout)
+        central_widget = QWidget()
+        central_widget.setLayout(main_layout)
+        self.setCentralWidget(central_widget)
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
