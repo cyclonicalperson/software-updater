@@ -1,9 +1,9 @@
 import asyncio
 import os
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar,
-                             QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QListWidgetItem, QSizePolicy,
-                             QComboBox, QMessageBox)
+from PyQt6.QtWidgets import (QApplication, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar, QTextEdit,
+                             QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QListWidgetItem, QSizePolicy, QComboBox,
+                             QMessageBox)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSignal, QObject, pyqtSlot, QThreadPool
 from PyQt6.QtGui import QIcon, QFont
 import gui_functions
@@ -118,20 +118,24 @@ class MainWindow(QWidget):
 
         button_row1.addWidget(self.toggle_btn)
 
+        # Make a QWidget merging the QLabel and QComboBox into a style-compliant button
         combobox_wrapper = QWidget()
         combobox_wrapper.setObjectName("ComboBoxWrapper")
         combobox_layout = QHBoxLayout()
-        combobox_layout.setContentsMargins(0, 0, 2, 0)  # A bit of padding on the right of the QComboBOx
+        combobox_layout.setContentsMargins(0, 0, 2, 0)  # A bit of padding on the right of the QComboBox
 
+        # QLabel for the ComboBox
         self.concurrency_label = QLabel("Number of Apps Updated At Once:")
         self.concurrency_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
+        # QComboBox
         self.concurrent_combobox = QComboBox()
-        self.concurrent_combobox.addItems([str(i) for i in range(1, 11)])
+        self.concurrent_combobox.addItems([str(i) for i in range(1, 11)])  # 1 - 10
         self.concurrent_combobox.setCurrentText(str(self.concurrent_update_number))
         self.concurrent_combobox.setFixedWidth(30)
         self.concurrent_combobox.currentTextChanged.connect(lambda value: self.handle_concurrency_change(int(value)))
 
+        # Merge into QWidget
         combobox_layout.addWidget(self.concurrency_label)
         combobox_layout.addWidget(self.concurrent_combobox)
         combobox_wrapper.setLayout(combobox_layout)
@@ -147,15 +151,18 @@ class MainWindow(QWidget):
         # === Row 2 ===
         button_row2 = QHBoxLayout()
 
+        # Update Selected Apps button
         self.selected_btn = QPushButton("Update Selected Apps")
         self.selected_btn.setEnabled(False)
         self.selected_btn.clicked.connect(self.update_selected_apps)
         button_row2.addWidget(self.selected_btn)
 
+        # Update All Apps button
         self.start_btn = QPushButton("Update All Apps")
         self.start_btn.clicked.connect(lambda: self.start_update(self.updates_list))
         button_row2.addWidget(self.start_btn)
 
+        # Stop Updates button
         self.stop_btn = QPushButton("Stop Update Process")
         self.stop_btn.setEnabled(False)
         self.stop_btn.clicked.connect(self.stop_updates)
@@ -209,6 +216,7 @@ class MainWindow(QWidget):
                 # Handle the case where `app` is not a dictionary
                 name = version = available_version = "Invalid data"
 
+            # Format the list entries
             if title == "Apps to Update":
                 text = f"{name} - {version} -> {available_version}"
             elif title == "Installed Apps":
@@ -224,6 +232,7 @@ class MainWindow(QWidget):
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(Qt.CheckState.Unchecked)
 
+            # If updates are not supported, show entry in italic
             if app.get("source", "") == "":
                 font = item.font()
                 font.setItalic(True)
@@ -300,6 +309,7 @@ class MainWindow(QWidget):
         selected_item = self.get_selected_item(self.stack.currentIndex())[0]
 
         if selected_item:
+            # Fetch the app with all of it's data
             app = selected_item.data(Qt.ItemDataRole.UserRole)
             if app:
                 app_name = app.get("name")
@@ -331,6 +341,7 @@ class MainWindow(QWidget):
         selected_item = exclusions_widget.selectedItems()[0] if exclusions_widget.selectedItems() else None
 
         if selected_item:
+            # Fetch the app with all of it's data
             app = selected_item.data(Qt.ItemDataRole.UserRole)
             app_name = app.get("name")
 
@@ -339,7 +350,7 @@ class MainWindow(QWidget):
             exclusions_widget.takeItem(exclusions_widget.row(selected_item))
 
             if app.get("available"):
-                # Add back to updates list
+                # Add back to updates list if it has an update
                 if app_name not in [a.get("name") for a in self.updates_list]:
                     self.updates_list.append(app)
 
@@ -354,6 +365,7 @@ class MainWindow(QWidget):
 
     def start_update(self, apps_to_update):
         """Starts the update process for the given app list."""
+        # Reset GUI progress widgets
         self.status_box.clear()
         self.progress_bar.setValue(0)
 
@@ -362,11 +374,13 @@ class MainWindow(QWidget):
         self.selected_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
 
+        # Ensure no malformed entries are sent to the function
         clean_updates = [app for app in apps_to_update if isinstance(app, dict) and "name" in app and "id" in app]
         if not clean_updates:
             self.status_box.append("<font color='red'>No valid apps to update.</font>")
             return
 
+        # Setup variables and signals for the QThread
         self.concurrent_update_number = int(self.concurrent_combobox.currentText())
         self.manager = UpdateManager(concurrent_limit=self.concurrent_update_number)
         self.manager.stop_requested = False
@@ -376,6 +390,7 @@ class MainWindow(QWidget):
         )
         self.manager.completed.connect(self.on_update_complete)
 
+        # Call the update function in the new thread
         async_worker = AsyncWorker(self.manager.check_and_install, clean_updates)
         async_worker.signals.error.connect(self.show_error_message)
         self.threadpool.start(async_worker)
@@ -386,8 +401,9 @@ class MainWindow(QWidget):
 
         updates_widget = self.view_widgets["updates"].findChild(QListWidget)
         updates_widget.blockSignals(True)  # Prevent premature signal triggering
-        updates_widget.clear()
+        updates_widget.clear()  # Clears the QListWidget
 
+        # Adds back entries to the QListWidget
         for app in self.updates_list:
             name = app.get("name", "Unknown")
             version = app.get("version", "Unknown")
@@ -415,6 +431,7 @@ class MainWindow(QWidget):
         list_widget = self.view_widgets["updates"].findChild(QListWidget)
         selected_apps = []
 
+        # Parse all entries in the update list, add checked entries to a new list
         for i in range(list_widget.count()):
             item = list_widget.item(i)
             if item.checkState() == Qt.CheckState.Checked:
