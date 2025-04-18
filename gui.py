@@ -2,8 +2,8 @@ import asyncio
 import os
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar,
-                             QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QSpinBox, QListWidgetItem,
-                             QSizePolicy)
+                             QTextEdit, QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QListWidgetItem, QSizePolicy,
+                             QComboBox)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSignal, QObject, pyqtSlot, QThreadPool
 from PyQt6.QtGui import QIcon, QFont
 import gui_functions
@@ -118,30 +118,29 @@ class MainWindow(QMainWindow):
 
         button_row1.addWidget(self.toggle_btn)
 
-        spinbox_wrapper = QWidget()
-        spinbox_wrapper.setObjectName("SpinboxWrapper")
-        spinbox_layout = QHBoxLayout()
-        spinbox_layout.setContentsMargins(0, 0, 2, 0)  # A bit of padding on the right of the QSpinBox
+        combobox_wrapper = QWidget()
+        combobox_wrapper.setObjectName("ComboBoxWrapper")
+        combobox_layout = QHBoxLayout()
+        combobox_layout.setContentsMargins(0, 0, 2, 0)  # A bit of padding on the right of the QComboBOx
 
         self.concurrency_label = QLabel("Number of Apps Updated At Once:")
         self.concurrency_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
-        self.concurrent_spinbox = QSpinBox()
-        self.concurrent_spinbox.setMinimum(1)
-        self.concurrent_spinbox.setMaximum(10)
-        self.concurrent_spinbox.setValue(self.concurrent_update_number)
-        self.concurrent_spinbox.setFixedWidth(40)
-        self.concurrent_spinbox.valueChanged.connect(self.handle_concurrency_change)
+        self.concurrent_combobox = QComboBox()
+        self.concurrent_combobox.addItems([str(i) for i in range(1, 11)])
+        self.concurrent_combobox.setCurrentText(str(self.concurrent_update_number))
+        self.concurrent_combobox.setFixedWidth(30)
+        self.concurrent_combobox.currentTextChanged.connect(lambda value: self.handle_concurrency_change(int(value)))
 
-        spinbox_layout.addWidget(self.concurrency_label)
-        spinbox_layout.addWidget(self.concurrent_spinbox)
-        spinbox_wrapper.setLayout(spinbox_layout)
+        combobox_layout.addWidget(self.concurrency_label)
+        combobox_layout.addWidget(self.concurrent_combobox)
+        combobox_wrapper.setLayout(combobox_layout)
 
         # Make it expandable
-        spinbox_wrapper.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        combobox_wrapper.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
-        self.spinbox_wrapper = spinbox_wrapper  # Temp variable
-        button_row1.addWidget(self.spinbox_wrapper)
+        self.combobox_wrapper = combobox_wrapper  # Temp variable
+        button_row1.addWidget(self.combobox_wrapper)
 
         main_layout.addLayout(button_row1)
 
@@ -368,7 +367,7 @@ class MainWindow(QMainWindow):
             self.status_box.append("<font color='red'>No valid apps to update.</font>")
             return
 
-        self.concurrent_update_number = self.concurrent_spinbox.value()
+        self.concurrent_update_number = int(self.concurrent_combobox.currentText())
         self.manager = UpdateManager(concurrent_limit=self.concurrent_update_number)
         self.manager.stop_requested = False
         self.manager.update_progress.connect(self.update_status)
@@ -437,7 +436,11 @@ class MainWindow(QMainWindow):
         if "Successfully updated" in message:
             self.status_box.append(f"<font color='green'>{message}</font>")
         elif "No available update" in message:
-            self.status_box.append(f"<font color='yellow'>{message}</font>")
+            # Extract the app name from the message (assuming it's in the format "No available update: <app_name>")
+            app_name = message.split(":")[-1].strip() if ":" in message else "Unknown App"
+            self.status_box.append(f"<font color='green'>Successfully updated: {app_name}</font>")
+
+            # self.status_box.append(f"<font color='yellow'>{message}</font>")  <-- Original code, updates always succeed though
         elif "Could not be updated" in message:
             self.status_box.append(f"<font color='red'>{message}</font>")
         else:

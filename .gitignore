@@ -1,5 +1,5 @@
 # Project specific
-exclusions.json
+TODO.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -175,3 +175,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+/TODO.txt

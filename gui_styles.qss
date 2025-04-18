@@ -60,7 +60,7 @@ QTextEdit {
     padding: 5px;
 }
 
-#SpinboxWrapper {
+#ComboBoxWrapper {
     background-color: #00ADB5;
     color: #fff;
     border: none;
@@ -68,7 +68,8 @@ QTextEdit {
     border-radius: 6px;
     font-weight: bold;
 }
-#SpinboxWrapper QLabel {
+
+#ComboBoxWrapper QLabel {
     background-color: #00ADB5;
     color: #fff;
     border: none;
@@ -76,12 +77,27 @@ QTextEdit {
     border-radius: 6px;
     font-weight: bold;
 }
-#SpinboxWrapper QSpinBox {
+
+#ComboBoxWrapper QComboBox {
     background-color: #232323;
     color: #ffffff;
     border: 1px solid #555;
     border-radius: 4px;
     padding: 4px;
+    padding-right: 0px; /* No space for arrow */
+}
+
+#ComboBoxWrapper QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 0px; /* No space for arrow */
+    border-left: none;
+}
+
+#ComboBoxWrapper QComboBox::down-arrow {
+    width: 0;
+    height: 0;
+    display: none; /* Hide the arrow */
 }
 
 QProgressBar {
