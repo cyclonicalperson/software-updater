@@ -1,9 +1,8 @@
-import os
-import sys
-
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QMainWindow, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QFrame, QWidget
+
+import gui_functions
 
 
 class FramelessWindow(QMainWindow):
@@ -19,20 +18,9 @@ class FramelessWindow(QMainWindow):
 
     def load_styles(self):
         """Loads the app's CSS from gui_styles.qss."""
-        try:
-            if getattr(sys, 'frozen', False):
-                # Running as compiled .exe
-                base_path = sys._MEIPASS
-            else:
-                # Running from source
-                base_path = os.path.dirname(os.path.abspath(__file__))
-
-            qss_path = os.path.join(base_path, "gui_styles.qss")
-            with open(qss_path, "r", encoding="utf-8") as f:
-                self.setStyleSheet(f.read())
-
-        except Exception as e:
-            print(f"[Style Load Error] {e}")
+        qss_path = gui_functions.resource_path("gui_styles.qss")
+        with open(qss_path, "r", encoding="utf-8") as f:
+            self.setStyleSheet(f.read())
 
     def init_ui(self, content_widget):
         # Title bar

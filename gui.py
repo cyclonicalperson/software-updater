@@ -1,5 +1,4 @@
 import asyncio
-import os
 import sys
 from PyQt6.QtWidgets import (QApplication, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar, QTextEdit,
                              QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QListWidgetItem, QSizePolicy, QComboBox,
@@ -359,7 +358,6 @@ class MainWindow(QWidget):
             return
 
         # Setup variables and signals for the QThread
-        self.concurrent_update_number = int(self.concurrent_combobox.currentText())
         self.manager = UpdateManager(concurrent_limit=self.concurrent_update_number)
         self.manager.stop_requested = False
         self.manager.update_progress.connect(self.update_status)
@@ -467,6 +465,13 @@ class MainWindow(QWidget):
         dialog.setLayout(layout)
         dialog.exec()
 
+    def handle_concurrency_change(self, value):
+        """Tracks the number of concurrent updates and shows a warning for large values."""
+        self.concurrent_update_number = value
+        if value >= 5 and self.warning_not_shown:
+            gui_functions.show_warning("Running more than 5 concurrent updates may slow down your system.")
+            self.warning_not_shown = False
+
     def update_status(self, progress, message):
         """Prints the update status of apps in the update process to the status box."""
         self.progress_bar.setValue(progress)
@@ -482,13 +487,6 @@ class MainWindow(QWidget):
             self.status_box.append(f"<font color='red'>{message}</font>")
         else:
             self.status_box.append(message)
-
-    def handle_concurrency_change(self, value):
-        """Tracks the number of concurrent updates and shows a warning for large values."""
-        self.concurrent_update_number = value
-        if value >= 5 and self.warning_not_shown:
-            gui_functions.show_warning("Running more than 5 concurrent updates may slow down your system.")
-            self.warning_not_shown = False
 
     def show_error_message(self, message):
         """Prints an error message in the status text box."""
