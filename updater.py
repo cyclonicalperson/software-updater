@@ -48,7 +48,7 @@ class UpdateManager(QObject):
                 self.completed.emit()
             else:
                 logging.warning(f"Completed {self.completed_count} out of {self.total_apps} updates.")
-                self.update_progress.emit(int((self.completed_count / self.total_apps) * 100), "Update process finished with possible errors.")
+                self.update_progress.emit(int((self.completed_count / self.total_apps) * 100), "Update process was stopped or finished with possible errors.")
                 self.completed.emit()
 
         except Exception as e:

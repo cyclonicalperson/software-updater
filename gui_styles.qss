@@ -25,6 +25,11 @@ QListWidget {
     padding: 5px;
 }
 
+QListWidget::item-hover {
+    background-color: #333333;
+    color: #ffffff;
+}
+
 QListWidget::item-selected {
     background-color: #444;
     color: #f0f0f0;

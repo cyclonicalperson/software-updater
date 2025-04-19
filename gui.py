@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (QApplication, QListWidget, QPushButton, QVBoxLayout
                              QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QListWidgetItem, QSizePolicy, QComboBox,
                              QMessageBox)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSignal, QObject, pyqtSlot, QThreadPool
-from PyQt6.QtGui import QIcon, QFont
+from PyQt6.QtGui import QIcon, QFont, QColor
 import gui_functions
 from updater import UpdateManager
 
@@ -164,8 +164,8 @@ class MainWindow(QWidget):
 
         # Stop Updates button
         self.stop_btn = QPushButton("Stop Update Process")
-        self.stop_btn.setEnabled(False)
         self.stop_btn.clicked.connect(self.stop_updates)
+        self.stop_btn.hide()  # Hidden at app start
         button_row2.addWidget(self.stop_btn)
 
         main_layout.addLayout(button_row2)
@@ -232,11 +232,12 @@ class MainWindow(QWidget):
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(Qt.CheckState.Unchecked)
 
-            # If updates are not supported, show entry in italic
+            # If updates are not supported, visually denote that
             if app.get("source", "") == "":
                 font = item.font()
                 font.setItalic(True)
                 item.setFont(font)
+                item.setBackground(QColor("#4e1e1e"))
 
             list_widget.addItem(item)
 
@@ -369,10 +370,10 @@ class MainWindow(QWidget):
         self.status_box.clear()
         self.progress_bar.setValue(0)
 
-        # Disable both update buttons, enable stop
-        self.start_btn.setEnabled(False)
-        self.selected_btn.setEnabled(False)
-        self.stop_btn.setEnabled(True)
+        # Remove update buttons, show stop button
+        self.start_btn.hide()
+        self.selected_btn.hide()
+        self.stop_btn.show()
 
         # Ensure no malformed entries are sent to the function
         clean_updates = [app for app in apps_to_update if isinstance(app, dict) and "name" in app and "id" in app]
@@ -423,7 +424,12 @@ class MainWindow(QWidget):
 
         updates_widget.sortItems(Qt.SortOrder.AscendingOrder)
         updates_widget.blockSignals(False)
-        self.stop_btn.setEnabled(False)
+
+        # Return update buttons, remove stop button
+        self.start_btn.show()
+        self.selected_btn.show()
+        self.stop_btn.hide()
+
         self.update_button_states()
 
     def update_selected_apps(self):
