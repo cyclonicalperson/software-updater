@@ -373,6 +373,7 @@ class MainWindow(QWidget):
 
     def on_update_complete(self):
         """Fetches the new app and update lists after the update process is completed, and refreshes them in the GUI."""
+        self.apps_list = gui_functions.get_installed_apps()
         self.updates_list = gui_functions.get_update_list(self.apps_list, self.exclusions_list)
 
         updates_widget = self.view_widgets["updates"].findChild(QListWidget)
