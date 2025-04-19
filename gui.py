@@ -59,20 +59,9 @@ class MainWindow(QWidget):
 
     def load_styles(self):
         """Loads the app's CSS from gui_styles.qss."""
-        try:
-            if getattr(sys, 'frozen', False):
-                # Running as compiled .exe
-                base_path = sys._MEIPASS
-            else:
-                # Running from source
-                base_path = os.path.dirname(os.path.abspath(__file__))
-
-            qss_path = os.path.join(base_path, "gui_styles.qss")
-            with open(qss_path, "r", encoding="utf-8") as f:
-                self.setStyleSheet(f.read())
-
-        except Exception as e:
-            print(f"[Style Load Error] {e}")
+        qss_path = gui_functions.resource_path("gui_styles.qss")
+        with open(qss_path, "r", encoding="utf-8") as f:
+            self.setStyleSheet(f.read())
 
     def _init_ui(self):
         """Initializes all the GUI elements."""
@@ -111,21 +100,11 @@ class MainWindow(QWidget):
 
         # Skip Updates button
         self.toggle_btn = QPushButton("Skip Updates for Selected App")
-        self.toggle_btn.setEnabled(False)
+        self.toggle_btn.hide()  # Hidden at app start
         self.toggle_btn.clicked.connect(self.update_button_states)
         self.toggle_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)  # Make it expandable
 
         button_row1.addWidget(self.toggle_btn)
-
-        # Settings button
-        self.settings_btn = QPushButton()
-        self.settings_btn.setIcon(QIcon("settings.ico"))
-        self.settings_btn.setToolTip("Open Settings")
-        self.settings_btn.setFixedSize(32, 32)
-        self.settings_btn.clicked.connect(self.open_settings_dialog)
-
-        button_row1.addWidget(self.settings_btn)
-
         main_layout.addLayout(button_row1)
 
         # === Row 2 ===
@@ -150,10 +129,23 @@ class MainWindow(QWidget):
 
         main_layout.addLayout(button_row2)
 
+        # Progress bar and settings row
+        settings_layout = QHBoxLayout()
+
         # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
-        main_layout.addWidget(self.progress_bar)
+
+        # Settings button
+        self.settings_btn = QPushButton()
+        self.settings_btn.setIcon(QIcon(gui_functions.resource_path("settings.ico")))
+        self.settings_btn.setToolTip("Open Settings")
+        self.settings_btn.setFixedSize(24, 24)
+        self.settings_btn.clicked.connect(self.open_settings_dialog)
+
+        settings_layout.addWidget(self.progress_bar)
+        settings_layout.addWidget(self.settings_btn)
+        main_layout.addLayout(settings_layout)
 
         # Status box
         self.status_box = QTextEdit()
@@ -264,8 +256,11 @@ class MainWindow(QWidget):
         current_index = self.stack.currentIndex()
         selected_item = self.get_selected_item(current_index)
 
-        # Enable/disable the toggle button based on selection
-        self.toggle_btn.setEnabled(bool(selected_item))
+        # Hide/Show the toggle button based on selection
+        if selected_item:
+            self.toggle_btn.show()
+        else:
+            self.toggle_btn.hide()
 
         # Change toggle button text based on view
         if current_index == 1:  # Excluded Apps
@@ -338,6 +333,8 @@ class MainWindow(QWidget):
                 updates_widget = self.view_widgets["updates"].findChild(QListWidget)
                 item = QListWidgetItem(f"{app_name} - {app['version']} -> {app['available']}")
                 item.setData(Qt.ItemDataRole.UserRole, app)
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(Qt.CheckState.Unchecked)
                 updates_widget.addItem(item)
                 updates_widget.sortItems(Qt.SortOrder.AscendingOrder)
 

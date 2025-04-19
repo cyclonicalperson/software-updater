@@ -309,3 +309,10 @@ def get_best_full_name(raw_name, full_names, used_names):
 
     # Fallback
     return raw_name
+
+
+def resource_path(filename: str) -> str:
+    """Gets the path of icons and pictures when compiled into an executable."""
+    if getattr(sys, 'frozen', False):
+        return os.path.join(sys._MEIPASS, filename)
+    return os.path.join(os.path.abspath("."), filename)
