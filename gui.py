@@ -3,7 +3,7 @@ import os
 import sys
 from PyQt6.QtWidgets import (QApplication, QListWidget, QPushButton, QVBoxLayout, QWidget, QProgressBar, QTextEdit,
                              QHBoxLayout, QStackedWidget, QGroupBox, QLabel, QListWidgetItem, QSizePolicy, QComboBox,
-                             QMessageBox)
+                             QMessageBox, QDialog)
 from PyQt6.QtCore import Qt, QRunnable, pyqtSignal, QObject, pyqtSlot, QThreadPool
 from PyQt6.QtGui import QIcon, QFont, QColor
 import gui_functions
@@ -109,42 +109,22 @@ class MainWindow(QWidget):
         # === Row 1 ===
         button_row1 = QHBoxLayout()
 
+        # Skip Updates button
         self.toggle_btn = QPushButton("Skip Updates for Selected App")
         self.toggle_btn.setEnabled(False)
         self.toggle_btn.clicked.connect(self.update_button_states)
-
-        # Make it expandable
-        self.toggle_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.toggle_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)  # Make it expandable
 
         button_row1.addWidget(self.toggle_btn)
 
-        # Make a QWidget merging the QLabel and QComboBox into a style-compliant button
-        combobox_wrapper = QWidget()
-        combobox_wrapper.setObjectName("ComboBoxWrapper")
-        combobox_layout = QHBoxLayout()
-        combobox_layout.setContentsMargins(0, 0, 2, 0)  # A bit of padding on the right of the QComboBox
+        # Settings button
+        self.settings_btn = QPushButton()
+        self.settings_btn.setIcon(QIcon("settings.ico"))
+        self.settings_btn.setToolTip("Open Settings")
+        self.settings_btn.setFixedSize(32, 32)
+        self.settings_btn.clicked.connect(self.open_settings_dialog)
 
-        # QLabel for the ComboBox
-        self.concurrency_label = QLabel("Number of Apps Updated At Once:")
-        self.concurrency_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-
-        # QComboBox
-        self.concurrent_combobox = QComboBox()
-        self.concurrent_combobox.addItems([str(i) for i in range(1, 11)])  # 1 - 10
-        self.concurrent_combobox.setCurrentText(str(self.concurrent_update_number))
-        self.concurrent_combobox.setFixedWidth(30)
-        self.concurrent_combobox.currentTextChanged.connect(lambda value: self.handle_concurrency_change(int(value)))
-
-        # Merge into QWidget
-        combobox_layout.addWidget(self.concurrency_label)
-        combobox_layout.addWidget(self.concurrent_combobox)
-        combobox_wrapper.setLayout(combobox_layout)
-
-        # Make it expandable
-        combobox_wrapper.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-        self.combobox_wrapper = combobox_wrapper  # Temp variable
-        button_row1.addWidget(self.combobox_wrapper)
+        button_row1.addWidget(self.settings_btn)
 
         main_layout.addLayout(button_row1)
 
@@ -452,6 +432,43 @@ class MainWindow(QWidget):
         if self.manager:
             self.manager.stop_requested = True
             self.status_box.append("<font color='orange'>Update process has been requested to stop...</font>")
+
+    def open_settings_dialog(self):
+        """Opens the settings dialog for changing the app configuration."""
+        dialog = QDialog(self)
+        dialog.setObjectName("SettingsDialog")
+        dialog.setWindowTitle("Settings")
+        dialog.setModal(True)
+        dialog.setFixedSize(270, 100)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(15, 15, 15, 15)
+
+        # Row for label + combobox
+        row_layout = QHBoxLayout()
+
+        label = QLabel("Number of Apps Updated At Once:")
+        label.setObjectName("SettingsLabel")
+
+        combo = QComboBox()
+        combo.setObjectName("SettingsComboBox")
+        combo.addItems([str(i) for i in range(1, 11)])
+        combo.setCurrentText(str(self.concurrent_update_number))
+        combo.setFixedWidth(40)
+        combo.currentTextChanged.connect(lambda val: self.handle_concurrency_change(int(val)))
+
+        row_layout.addWidget(label)
+        row_layout.addWidget(combo)
+        layout.addLayout(row_layout)
+
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.setObjectName("SettingsCloseButton")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+
+        dialog.setLayout(layout)
+        dialog.exec()
 
     def update_status(self, progress, message):
         """Prints the update status of apps in the update process to the status box."""

@@ -25,14 +25,14 @@ QListWidget {
     padding: 5px;
 }
 
-QListWidget::item-hover {
-    background-color: #333333;
+QListWidget::item:hover {
+    background-color: #3a3a3a;
     color: #ffffff;
 }
 
-QListWidget::item-selected {
-    background-color: #444;
-    color: #f0f0f0;
+QListWidget::item:selected {
+    background-color: #006872;
+    color: #ffffff;
 }
 
 QPushButton {
@@ -65,46 +65,6 @@ QTextEdit {
     padding: 5px;
 }
 
-#ComboBoxWrapper {
-    background-color: #00ADB5;
-    color: #fff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-weight: bold;
-}
-
-#ComboBoxWrapper QLabel {
-    background-color: #00ADB5;
-    color: #fff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-weight: bold;
-}
-
-#ComboBoxWrapper QComboBox {
-    background-color: #232323;
-    color: #ffffff;
-    border: 1px solid #555;
-    border-radius: 4px;
-    padding: 4px;
-    padding-right: 0px;
-}
-
-#ComboBoxWrapper QComboBox::drop-down {
-    subcontrol-origin: padding;
-    subcontrol-position: top right;
-    width: 0px;
-    border-left: none;
-}
-
-#ComboBoxWrapper QComboBox::down-arrow {
-    width: 0;
-    height: 0;
-    display: none;
-}
-
 QProgressBar {
     height: 20px;
     text-align: center;
@@ -124,7 +84,7 @@ QStatusBar {
     background-color: #1a1a1a;
     color: #888;
     border-top: 1px solid #333;
-    margin-bottom: 0px;  /* Remove extra space below the status bar */
+    margin-bottom: 0px;
 }
 
 [navButton="true"] {
@@ -235,5 +195,50 @@ QScrollBar::sub-line:horizontal {
 }
 
 #TitleBar QPushButton:pressed {
+    background-color: #02889b;
+}
+
+/* SETTINGS DIALOG */
+
+#SettingsDialog {
+    background-color: #121212;
+    color: #ffffff;
+    border: 1px solid #333;
+    border-radius: 6px;
+}
+
+#SettingsLabel {
+    color: #ffffff;
+    font-size: 12px;
+}
+
+#SettingsComboBox {
+    background-color: #232323;
+    color: #ffffff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+#SettingsComboBox QAbstractItemView {
+    background-color: #232323;
+    color: #ffffff;
+    selection-background-color: #444;
+}
+
+#SettingsCloseButton {
+    background-color: #00ADB5;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+#SettingsCloseButton:hover {
+    background-color: #06c7d8;
+}
+
+#SettingsCloseButton:pressed {
     background-color: #02889b;
 }
