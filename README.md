@@ -3,12 +3,12 @@
 A GUI-based software updater for Windows 10/11, built with Python and PyQt6.<br>
 Designed to streamline the process of checking for, downloading, and installing updates for various applications.<br>
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/8e3f10d5-fb38-4cbf-b14c-9be9537419d0">
+  <img src="https://github.com/user-attachments/assets/829a1fed-0485-42a6-bda7-fb5369166768">
 </p>
 
 ## Requirements
 
-- Windows 10/11 (Older versions not supported)
+- **Windows 10/11** (Older versions not supported)
 
 ## Features
 
@@ -23,18 +23,21 @@ Designed to streamline the process of checking for, downloading, and installing 
 The app should be **ran as administrator** on first boot to install neccesary dependencies.<br>
 It also won't show UAC prompts, requesting administrator access to update apps.<br>
 
-### App Lists
+### - App Lists -
 The **Available Updates** list shows all apps with updates that may be installed.<br><br>
 The **Skipped Updates** list shows all apps which will not be checked for updates and ignored. <br>Apps may be added to this list from any of the other two lists.<br><br>
-The **Installed Apps** list shows all apps detected on the system. <br>Apps in <i>italic</i> are not supported for automatic updates.<br><br>
+The **Installed Apps** list shows all apps detected on the system. <br>Apps in <i>italic</i> with a red background are not supported for automatic updates.<br><br>
 
-### Buttons
+### - Buttons -
 Apps may be updated in two ways:
  - All at once with the **Update All Apps** button, or
  - Only the checkmarked apps with the **Update Selected Apps** button.<br>
 
-The **Number of Apps Updated at Once** box shows how many update processes will run at once. <br>Running many processes may slow down the entire system (since the app will utilize up to 100% of the CPU).<br><br>
-The update process may be stopped at any time with the **Stop Update Process** button, only the currently running updates will finish updating.
+The **Stop Update Process** button appears when the update process starts, and will stop further app updates. <br> Currently running updates will still finish.<br><br>
+The **Skip/Restore Updates for Selected App** button will appear when an app is selected, and moves the app to and from the **Skipped Updates** list.<br>
+
+The **cogwheel button** right of the progress bar opens the app config:
+- The **Number of Apps Updated at Once** setting is how many update processes will run at once. <br>Running many processes may slow down the entire system (since the app will utilize up to 100% of the CPU).<br><br>
 
 ## FAQ
 **- Can the application update all apps?<br>**
@@ -76,12 +79,14 @@ Run the application using:
 
 ```
 software-updater/
+├── OLD/                      # Folder containing old, no longer used 1.x.x files
 ├── gui.py                    # Main GUI application
 ├── frameless_window.py       # GUI component for replacing the default Windows window
-├── gui_styles.qss            # CSS for the GUI
 ├── gui_functions.py          # Logic for the GUI
+├── gui_styles.qss            # CSS for the GUI
 ├── updater.py                # Logic for automatically updating applications
 ├── icon.ico                  # App icon
+├── settings.ico              # Settings button icon
 └── requirements.txt          # Python dependencies
 ```
 
