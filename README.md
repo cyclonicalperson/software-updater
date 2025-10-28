@@ -1,7 +1,7 @@
 # Software Updater
 
 A GUI-based software updater for Windows 10/11, built with Python and PyQt6.<br>
-Designed to streamline the process of checking for, downloading, and installing updates for various applications.<br>
+Designed to streamline the process of checking for, downloading and installing updates for various applications.<br>
 <p align="center">
   <img src="https://github.com/user-attachments/assets/829a1fed-0485-42a6-bda7-fb5369166768">
 </p>
@@ -18,10 +18,24 @@ Designed to streamline the process of checking for, downloading, and installing 
 - **Skip Updates**: Option to skip updates for selected applications.
 - **Process Control**: Ability to stop ongoing update processes.
 
+## Prerequisites
+
+Before running the application, you must install the **Microsoft.WinGet.Client** PowerShell module:
+
+1. **Open PowerShell as Administrator** (Right-click PowerShell → "Run as Administrator")
+2. Run the following command:
+   ```powershell
+   Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Scope AllUsers -Force
+   ```
+3. If prompted to trust PSGallery, type **Y** and press Enter
+4. Wait for the installation to complete
+
+**Note:** This is a one-time setup. After installation, you can run the app without administrator privileges.<br>
+However, running the app **with** administrator priviledges will bypass UAC prompts during the update process.
+
 ## Usage
 
-The app should be **ran as administrator** on first boot to install neccesary dependencies.<br>
-It also won't show UAC prompts, requesting administrator access to update apps.<br>
+The app should be ran as administrator on first boot in order to automatically install necessary dependencies, ***if*** the prerequisites are not fulfilled.<br>
 
 ### - App Lists -
 The **Available Updates** list shows all apps with updates that may be installed.<br><br>
@@ -49,31 +63,43 @@ Any app in the **Installed Apps** or **Available Updates** list can be selected 
 Apps can be returned back to the installed apps list by selecting an app in the exclusion list and pressing the '**Restore Updates**' button.<br>
 Any apps in the exclusion list will have their updates skipped.
 
-## Installation (for development)
+## Installation
 
-1. Clone the repository:
+1. Install PowerShell Module (Required - One-time setup)
 
-    ```bash
-    git clone https://github.com/cyclonicalperson/software-updater.git
-    cd software-updater
-    ```
+**Open PowerShell as Administrator** and run:
+```powershell
+Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Scope AllUsers -Force
+```
 
-2. Create a Virtual Environment (optional but recommended):
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+2. Clone the repository
 
-3. Install dependencies:
+```bash
+git clone https://github.com/ahmad-lodhi07/patch-management-system.git
+cd patch-management-system
+```
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+3. Set up Python virtual environment
 
-Run the application using:
-  ```bash
-  python main.py
-  ```
+```powershell
+python -m venv env
+.\env\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+4. Run the application
+
+```powershell
+python gui.py
+```
+
+**Quick Start (After Initial Setup):**
+
+```powershell
+cd path\to\software-updater
+.\env\Scripts\Activate.ps1
+python gui.py
+```
 
 ## Directory Structure
 
